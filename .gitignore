@@ -1,0 +1,11 @@
+.DS_Store
+.yarn/*
+node_modules/
+
+.env
+
+dist/
+archives/
+data/
+
+*.tsbuildinfo

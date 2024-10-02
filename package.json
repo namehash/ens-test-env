@@ -1,0 +1,46 @@
+{
+  "name": "@ensdomains/ens-test-env",
+  "type": "module",
+  "version": "0.5.0-beta.1",
+  "files": [
+    "src"
+  ],
+  "types": "src/index.d.ts",
+  "scripts": {
+    "ver": "pnpm version --no-workspaces-update",
+    "publish:local": "yalc publish . --push --up"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@ethersproject/wallet": "^5.6.0",
+    "ansi-colors": "^4.1.1",
+    "cli-progress": "^3.10.0",
+    "commander": "^9.3.0",
+    "concurrently": "^7.1.0",
+    "docker-compose": "^0.24.7",
+    "dotenv": "^16.0.1",
+    "js-yaml": "^4.1.0",
+    "lz4": "^0.6.5",
+    "progress-stream": "^2.0.0",
+    "tar-fs": "^2.1.1",
+    "wait-on": "^6.0.1"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.7.5",
+    "@typescript-eslint/parser": "^6.7.5",
+    "eslint": "^8.51.0",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-airbnb-typescript": "^16.1.2",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "prettier": "^2.8.8",
+    "ts-node": "^10.7.0",
+    "typescript": "^5.3.2"
+  },
+  "preferUnplugged": true,
+  "bin": "./src/index.js"
+}
