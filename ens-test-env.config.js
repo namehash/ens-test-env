@@ -1,9 +1,9 @@
-const path = require('path')
+import path from 'node:path'
 
 /**
- * @type {import('./config').ENSTestEnvConfig}
+ * @type {import('./src/config').ENSTestEnvConfig}
  * */
-module.exports = {
+export default {
   deployCommand: 'yarn hardhat deploy',
   buildCommand: 'yarn build',
   labelHashes: [
