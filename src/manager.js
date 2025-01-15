@@ -1,8 +1,7 @@
 /* eslint-disable */
 import { spawn } from 'node:child_process'
 import concurrently from 'concurrently'
-import composev1 from 'docker-compose'
-import composev2 from 'docker-compose/dist/v2.js'
+import compose from 'docker-compose'
 import { Transform } from 'node:stream'
 import waitOn from 'wait-on'
 import { main as fetchData } from './fetch-data.js'
@@ -24,11 +23,8 @@ const opts = {
 let verbosity = 0
 
 const getCompose = async () => {
-  const versionv1 = await composev1.version().catch(() => null)
-  if (versionv1) return composev1
-
-  const versionv2 = await composev2.version().catch(() => null)
-  if (versionv2) return composev2
+  const version = await compose.version().catch(() => null)
+  if (version) return compose
 
   throw new Error('No docker-compose found, or docker not running?')
 }
