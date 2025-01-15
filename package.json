@@ -10,13 +10,13 @@
     "node": ">=18"
   },
   "dependencies": {
-    "ansi-colors": "^4.1.1",
     "cli-progress": "^3.10.0",
     "commander": "^9.3.0",
     "concurrently": "^7.1.0",
     "docker-compose": "^0.24.7",
     "dotenv": "^16.0.1",
     "js-yaml": "^4.1.0",
+    "picocolors": "^1.1.1",
     "progress-stream": "^2.0.0",
     "tar-fs": "^2.1.1",
     "wait-on": "^6.0.1"

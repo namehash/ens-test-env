@@ -39,11 +39,7 @@ module.exports = {
     },
     fork: {
       url: 'https://example.com',
-    },
-    wallet: {
-      mnemonic: 'test test test test test test test test test test test junk',
-      unlockedAccounts: ['0x0000000000000000000000000000000000000000'],
-    },
+    }
   },
   graph: {
     bypassLocal: false,

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /* eslint-disable */
-import colors from 'ansi-colors'
+import colors from 'picocolors'
 import cliProgress from 'cli-progress'
 import 'dotenv/config'
 import fs from 'node:fs'
