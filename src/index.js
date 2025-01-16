@@ -68,7 +68,7 @@ program
 program
   .command('start')
   .description('Starts the test environment')
-  .addOption(new Option('-nr, --no-reset', "Don't reset the data folder"))
+  .addOption(new Option('--no-reset', "Don't reset the data folder"))
   .addOption(
     new Option('-s, --save', 'Save data when exiting').implies({
       killGracefully: true,
@@ -81,10 +81,10 @@ program
       'Sets the relative extra time for deploys',
     ).conflicts('save'),
   )
-  .addOption(new Option('-ng, --no-graph', "Don't start the graph"))
+  .addOption(new Option('--no-graph', "Don't start the graph"))
   .addOption(new Option('-k, --kill-gracefully', 'Kill gracefully'))
-  .addOption(new Option('-nb, --no-build', "Don't run the build command"))
-  .addOption(new Option('-ns, --no-scripts', "Don't run the scripts"))
+  .addOption(new Option('--no-build', "Don't run the build command"))
+  .addOption(new Option('--no-scripts', "Don't run the scripts"))
   .addOption(
     new Option('--verbosity <level>', 'Verbose output level (0-2').default(0),
   )

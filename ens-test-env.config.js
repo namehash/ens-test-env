@@ -1,11 +1,11 @@
-const path = require('path')
+import path from 'node:path'
 
 /**
- * @type {import('./config').ENSTestEnvConfig}
+ * @type {import('./src/config').ENSTestEnvConfig}
  * */
-module.exports = {
-  deployCommand: 'yarn hardhat deploy',
-  buildCommand: 'yarn build',
+export default {
+  deployCommand: 'pnpm hardhat deploy',
+  buildCommand: 'pnpm build',
   labelHashes: [
     {
       hash: '0x4f5b812789fc606be1b3b16908db13fc7a9adf7ca72641f84d75b47069d3d7f0',
@@ -23,6 +23,6 @@ module.exports = {
   ],
   paths: {
     data: './data',
-    composeFile: './docker-compose.yml',
+    composeFile: './src/docker-compose.yml',
   },
 }

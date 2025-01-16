@@ -1,31 +1,25 @@
 {
   "name": "@ensdomains/ens-test-env",
   "type": "module",
-  "version": "0.5.0-beta.2",
+  "version": "0.5.0-beta.5",
   "files": [
     "src"
   ],
   "types": "src/index.d.ts",
-  "scripts": {
-    "ver": "pnpm version --no-workspaces-update",
-    "publish:local": "yalc publish --push --up"
-  },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
-    "@ethersproject/wallet": "^5.6.0",
-    "ansi-colors": "^4.1.1",
     "cli-progress": "^3.10.0",
-    "commander": "^9.3.0",
-    "concurrently": "^7.1.0",
-    "docker-compose": "^0.24.7",
+    "commander": "^13.0.0",
+    "concurrently": "^9.1.2",
+    "docker-compose": "^1.1.0",
     "dotenv": "^16.0.1",
     "js-yaml": "^4.1.0",
-    "lz4": "^0.6.5",
+    "picocolors": "^1.1.1",
     "progress-stream": "^2.0.0",
-    "tar-fs": "^2.1.1",
-    "wait-on": "^6.0.1"
+    "tar-fs": "^3.0.8",
+    "wait-on": "^8.0.2"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^6.7.5",
@@ -43,5 +37,6 @@
     "yalc": "^1.0.0-pre.53"
   },
   "preferUnplugged": true,
-  "bin": "./src/index.js"
+  "bin": "./src/index.js",
+  "packageManager": "pnpm@9.4.0+sha512.f549b8a52c9d2b8536762f99c0722205efc5af913e77835dbccc3b0b0b2ca9e7dc8022b78062c17291c48e88749c70ce88eb5a74f1fa8c4bf5e18bb46c8bd83a"
 }

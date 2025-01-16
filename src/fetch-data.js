@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
 /* eslint-disable */
-import colors from 'ansi-colors'
+import colors from 'picocolors'
 import cliProgress from 'cli-progress'
 import 'dotenv/config'
 import fs from 'node:fs'
-import lz4 from 'lz4'
 import progress from 'progress-stream'
-import { pipeline } from 'stream'
+import { pipeline } from 'node:stream'
 import tar from 'tar-fs'
 import { promisify } from 'node:util'
+import { createGzip, createGunzip } from 'node:zlib'
 
 const createProgressBar = (name, hasSpeed) =>
   new cliProgress.SingleBar({
@@ -50,8 +50,8 @@ const bytesToMb = (bytes) => bytes * 9.5367431640625e-7
 async function compressToArchive() {
   return new Promise(async (resolve, reject) => {
     let initial = true
-    const encoder = lz4.createEncoderStream({})
-    const output = fs.createWriteStream(localPath + '.tar.lz4', streamOpts)
+    const encoder = createGzip()
+    const output = fs.createWriteStream(localPath + '.tar.gz', streamOpts)
     const archive = tar.pack(dataPath)
     const progressStream = progress({})
 
@@ -86,10 +86,10 @@ async function decompressToOutput() {
     if (fs.existsSync(dataPath))
       await fs.promises.rm(dataPath, { recursive: true, force: true })
 
-    const archiveSize = fs.statSync(localPath + '.tar.lz4').size
+    const archiveSize = fs.statSync(localPath + '.tar.gz').size
     const unarchiver = tar.extract(dataPath)
-    const decoder = lz4.createDecoderStream()
-    const input = fs.createReadStream(localPath + '.tar.lz4', streamOpts)
+    const decoder = createGunzip()
+    const input = fs.createReadStream(localPath + '.tar.gz', streamOpts)
     const progressStream = progress({})
 
     extractProgressBar.start(archiveSize, 0, {
@@ -136,7 +136,7 @@ export const main = async (arg, config) => {
       return
     }
     case 'compress': {
-      console.log('Compressing /data to archive.tar.lz4...')
+      console.log('Compressing /data to archive.tar.gz...')
       await compressToArchive().then(() => logTime('Compressed archive in'))
       return
     }
