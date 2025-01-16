@@ -23,6 +23,6 @@ export default {
   ],
   paths: {
     data: './data',
-    composeFile: './docker-compose.yml',
+    composeFile: './src/docker-compose.yml',
   },
 }
