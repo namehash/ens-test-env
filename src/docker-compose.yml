@@ -1,4 +1,3 @@
-version: '3'
 services:
   anvil:
     image: ghcr.io/ensdomains/anvil:next
