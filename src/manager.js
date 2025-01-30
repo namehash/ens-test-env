@@ -5,13 +5,9 @@ import compose from 'docker-compose'
 import { Transform } from 'node:stream'
 import waitOn from 'wait-on'
 import { main as fetchData } from './fetch-data.js'
-import { fetch, Agent, setGlobalDispatcher } from 'undici'
+import { fetch } from 'undici'
 
-setGlobalDispatcher(
-  new Agent({
-    connections: 50,
-  })
-);
+
 
 let outputsToIgnore = [
   Buffer.from('eth_getBlockByNumber'),
@@ -48,6 +44,7 @@ const batchRpcFetch = (items) =>
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      Connection: 'close'
     },
     body: JSON.stringify(
       items.map((item, i) => ({ jsonrpc: '2.0', id: i + 1, ...item })),
@@ -356,6 +353,7 @@ export const main = async (_config, _options, justKill) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            Connection: 'close'
           },
           body: JSON.stringify({
             query: `
