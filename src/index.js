@@ -88,6 +88,7 @@ program
   .addOption(
     new Option('--verbosity <level>', 'Verbose output level (0-2').default(0),
   )
+  .addOption(new Option('--exit-after-deploy', 'Exit after deploying'))
   .action(async (options) => {
     if (options.save) {
       await fetchData('clean', config)
