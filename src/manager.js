@@ -5,7 +5,13 @@ import compose from 'docker-compose'
 import { Transform } from 'node:stream'
 import waitOn from 'wait-on'
 import { main as fetchData } from './fetch-data.js'
-import fetch from 'node-fetch-native/node'
+import { fetch, Agent, setGlobalDispatcher } from 'undici'
+
+setGlobalDispatcher(
+  new Agent({
+    connections: 50,
+  })
+);
 
 let outputsToIgnore = [
   Buffer.from('eth_getBlockByNumber'),
