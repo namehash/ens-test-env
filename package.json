@@ -11,16 +11,15 @@
   },
   "dependencies": {
     "cli-progress": "^3.10.0",
-    "commander": "^13.0.0",
-    "concurrently": "^9.1.2",
+    "commander": "^9.3.0",
+    "concurrently": "^7.1.0",
     "docker-compose": "^1.1.0",
     "dotenv": "^16.0.1",
     "js-yaml": "^4.1.0",
     "picocolors": "^1.1.1",
     "progress-stream": "^2.0.0",
-    "tar-fs": "^3.0.8",
-    "undici": "^7.3.0",
-    "wait-on": "^8.0.2"
+    "tar-fs": "^2.1.1",
+    "wait-on": "^6.0.1"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^6.7.5",
