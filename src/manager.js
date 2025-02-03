@@ -5,8 +5,7 @@ import compose from 'docker-compose'
 import { Transform } from 'node:stream'
 import waitOn from 'wait-on'
 import { main as fetchData } from './fetch-data.js'
-
-
+import fetch from 'node-fetch'
 
 let outputsToIgnore = [
   Buffer.from('eth_getBlockByNumber'),
