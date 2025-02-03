@@ -6,6 +6,18 @@ import { Transform } from 'node:stream'
 import waitOn from 'wait-on'
 import { main as fetchData } from './fetch-data.js'
 import fetch from 'node-fetch'
+import http from 'node:http'
+import https from 'node:https'
+
+const httpAgent = new http.Agent({ keepAlive: true })
+const httpsAgent = new https.Agent({ keepAlive: true })
+const agentSelector = function (_parsedURL) {
+  if (_parsedURL.protocol == 'http:') {
+    return httpAgent
+  } else {
+    return httpsAgent
+  }
+}
 
 let outputsToIgnore = [
   Buffer.from('eth_getBlockByNumber'),
@@ -42,8 +54,8 @@ const batchRpcFetch = (items) =>
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Connection: 'close'
     },
+    agent: agentSelector,
     body: JSON.stringify(
       items.map((item, i) => ({ jsonrpc: '2.0', id: i + 1, ...item })),
     ),
@@ -254,7 +266,10 @@ export const main = async (_config, _options, justKill) => {
     await rpcFetch('anvil_removeBlockTimestampInterval', [])
 
     if (options.exitAfterDeploy) {
-      console.log('\x1b[1;34m[config]\x1b[0m ', 'Exiting after contract deployment...')
+      console.log(
+        '\x1b[1;34m[config]\x1b[0m ',
+        'Exiting after contract deployment...',
+      )
       return cleanup(undefined, 0)
     }
 
@@ -351,8 +366,8 @@ export const main = async (_config, _options, justKill) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Connection: 'close'
           },
+          agent: agentSelector,
           body: JSON.stringify({
             query: `
             {
