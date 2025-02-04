@@ -15,9 +15,9 @@
     "concurrently": "^9.1.2",
     "docker-compose": "^1.1.0",
     "dotenv": "^16.4.7",
+    "dunai": "0.0.0-dev.2",
     "js-yaml": "^4.1.0",
     "picocolors": "^1.1.1",
-    "progress-stream": "^2.0.0",
     "tar-fs": "^3.0.8",
     "wait-on": "^8.0.2"
   },

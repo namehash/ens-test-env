@@ -7,7 +7,7 @@ import 'dotenv/config'
 import fs from 'node:fs'
 import { pipeline as streamPipeline } from 'node:stream/promises'
 import { createGunzip, createGzip } from 'node:zlib'
-import progress from 'progress-stream'
+import { createProgressStream } from 'dunai/progress'
 import tar from 'tar-fs'
 
 const createProgressBar = (name, hasSpeed) =>
@@ -49,7 +49,7 @@ async function compressToArchive() {
     const encoder = createGzip()
     const output = fs.createWriteStream(`${localPath}.tar.gz`, streamOpts)
     const archive = tar.pack(dataPath)
-    const progressStream = progress({})
+    const progressStream = createProgressStream({})
 
     progressStream.on('progress', (progress) => {
       if (initial) {
@@ -87,7 +87,7 @@ async function decompressToOutput() {
     const unarchiver = tar.extract(dataPath)
     const decoder = createGunzip()
     const input = fs.createReadStream(`${localPath}.tar.gz`, streamOpts)
-    const progressStream = progress({})
+    const progressStream = createProgressStream({})
 
     extractProgressBar.start(archiveSize, 0, {
       speed: 'N/A',
