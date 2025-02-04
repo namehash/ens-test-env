@@ -1,8 +1,8 @@
 /* eslint-disable */
 import { spawn } from 'node:child_process'
+import { Transform } from 'node:stream'
 import concurrently from 'concurrently'
 import compose from 'docker-compose'
-import { Transform } from 'node:stream'
 import waitOn from 'wait-on'
 import { main as fetchData } from './fetch-data.js'
 
@@ -63,7 +63,7 @@ async function cleanup(_, exitCode) {
   cleanupRunning = true
   if (!force) console.log('Cleaning up...')
   else console.log('Forcing cleanup...')
-  if (!(options && options.killGracefully) || force || !initialFinished) {
+  if (!options?.killGracefully || force || !initialFinished) {
     await compose
       .kill({
         ...opts,
@@ -95,12 +95,11 @@ async function cleanup(_, exitCode) {
     }
   }
 
-  commands &&
-    commands.forEach((command) => {
-      try {
-        process.kill(command.pid, 'SIGKILL')
-      } catch {}
-    })
+  commands?.forEach((command) => {
+    try {
+      process.kill(command.pid, 'SIGKILL')
+    } catch {}
+  })
 
   process.exit(exitCode ? 1 : 0)
 }
@@ -108,15 +107,15 @@ async function cleanup(_, exitCode) {
 const makePrepender = (prefix) =>
   new Transform({
     transform(chunk, _, done) {
-      this._rest =
-        this._rest && this._rest.length
-          ? Buffer.concat([this._rest, chunk])
-          : chunk
+      this._rest = this._rest?.length
+        ? Buffer.concat([this._rest, chunk])
+        : chunk
 
       let index
 
       // As long as we keep finding newlines, keep making slices of the buffer and push them to the
       // readable side of the transform stream
+      // biome-ignore lint/suspicious/noAssignInExpressions: <explanation>
       while ((index = this._rest.indexOf('\n')) !== -1) {
         // The `end` parameter is non-inclusive, so increase it to include the newline we found
         const line = this._rest.slice(0, ++index)
@@ -133,7 +132,7 @@ const makePrepender = (prefix) =>
     // data that we have saved
     flush(done) {
       // If we have any remaining data in the cache, send it out
-      if (this._rest && this._rest.length) {
+      if (this._rest?.length) {
         return void done(null, Buffer.concat([prefix, this._rest]))
       }
     },
@@ -159,7 +158,7 @@ const awaitCommand = async (name, command) => {
 export const main = async (_config, _options, justKill) => {
   config = _config
   options = _options
-  verbosity = parseInt(options.verbosity)
+  verbosity = Number.parseInt(options.verbosity)
 
   opts.cwd = config.paths.composeFile.split('/docker-compose.yml')[0]
 
@@ -193,7 +192,7 @@ export const main = async (_config, _options, justKill) => {
     .logs(['anvil', 'graph-node', 'postgres', 'ipfs', 'metadata'], {
       ...opts,
       log: false,
-      follow: verbosity > 0 ? true : false,
+      follow: verbosity > 0,
       callback: (chunk, source) => {
         if (source === 'stderr') {
           process.stderr.write(chunk)
@@ -204,7 +203,7 @@ export const main = async (_config, _options, justKill) => {
           if (chunk.includes(exitedBuffer)) {
             cleanup(
               undefined,
-              parseInt(chunk.toString().split('exited with code ')[1]),
+              Number.parseInt(chunk.toString().split('exited with code ')[1]),
             )
             return
           }
@@ -235,7 +234,7 @@ export const main = async (_config, _options, justKill) => {
       await rpcFetch('anvil_setNextBlockTimestamp', [1640995200])
     } else {
       const timestamp =
-        Math.floor(Date.now() / 1000) - parseInt(options.extraTime)
+        Math.floor(Date.now() / 1000) - Number.parseInt(options.extraTime)
       console.log(
         '\x1b[1;34m[config]\x1b[0m ',
         'setting timestamp to',
@@ -346,7 +345,7 @@ export const main = async (_config, _options, justKill) => {
 
   if (!options.save && cmdsToRun.length > 0 && options.scripts) {
     if (options.graph) {
-      let indexArray = []
+      const indexArray = []
       const getCurrentIndex = async () =>
         fetch('http://localhost:8000/subgraphs/name/graphprotocol/ens', {
           method: 'POST',

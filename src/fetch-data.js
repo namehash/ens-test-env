@@ -1,23 +1,18 @@
 #!/usr/bin/env node
 
+import cliProgress from 'cli-progress'
 /* eslint-disable */
 import colors from 'picocolors'
-import cliProgress from 'cli-progress'
 import 'dotenv/config'
 import fs from 'node:fs'
+import { pipeline as streamPipeline } from 'node:stream/promises'
+import { createGunzip, createGzip } from 'node:zlib'
 import progress from 'progress-stream'
-import { pipeline } from 'node:stream'
 import tar from 'tar-fs'
-import { promisify } from 'node:util'
-import { createGzip, createGunzip } from 'node:zlib'
 
 const createProgressBar = (name, hasSpeed) =>
   new cliProgress.SingleBar({
-    format:
-      `${name} Progress |` +
-      colors.cyan('{bar}') +
-      '| {percentage}% || {value}/{total} GB' +
-      (hasSpeed ? ' || Speed: {speed} MB/s' : ''),
+    format: `${name} Progress |${colors.cyan('{bar}')}| {percentage}% || {value}/{total} GB${hasSpeed ? ' || Speed: {speed} MB/s' : ''}`,
     barCompleteChar: '\u2588',
     barIncompleteChar: '\u2591',
     hideCursor: true,
@@ -37,9 +32,9 @@ const createProgressBar = (name, hasSpeed) =>
 const extractProgressBar = createProgressBar('Extract', true)
 const compressProgressBar = createProgressBar('Compress', false)
 
-let localPath, dataPath
+let localPath
+let dataPath
 
-const streamPipeline = promisify(pipeline)
 const streamOpts = {
   highWaterMark: 67108864, // 64MB
 }
@@ -48,10 +43,11 @@ const bytesToGb = (bytes) => bytes * 9.3132257461548e-10
 const bytesToMb = (bytes) => bytes * 9.5367431640625e-7
 
 async function compressToArchive() {
+  // biome-ignore lint/suspicious/noAsyncPromiseExecutor: idk how to fix yet
   return new Promise(async (resolve, reject) => {
     let initial = true
     const encoder = createGzip()
-    const output = fs.createWriteStream(localPath + '.tar.gz', streamOpts)
+    const output = fs.createWriteStream(`${localPath}.tar.gz`, streamOpts)
     const archive = tar.pack(dataPath)
     const progressStream = progress({})
 
@@ -82,14 +78,15 @@ async function compressToArchive() {
 }
 
 async function decompressToOutput() {
+  // biome-ignore lint/suspicious/noAsyncPromiseExecutor: idk how to fix it yet
   return new Promise(async (resolve, reject) => {
     if (fs.existsSync(dataPath))
       await fs.promises.rm(dataPath, { recursive: true, force: true })
 
-    const archiveSize = fs.statSync(localPath + '.tar.gz').size
+    const archiveSize = fs.statSync(`${localPath}.tar.gz`).size
     const unarchiver = tar.extract(dataPath)
     const decoder = createGunzip()
-    const input = fs.createReadStream(localPath + '.tar.gz', streamOpts)
+    const input = fs.createReadStream(`${localPath}.tar.gz`, streamOpts)
     const progressStream = progress({})
 
     extractProgressBar.start(archiveSize, 0, {
@@ -114,13 +111,13 @@ async function decompressToOutput() {
 
     const readMePath = `${dataPath}/ipfs/blocks/_README`
     if (fs.existsSync(readMePath)) {
-      await fs.promises.rm(readMePath, {force: true})
+      await fs.promises.rm(readMePath, { force: true })
     }
   })
 }
 
 export const main = async (arg, config) => {
-  let time = Date.now()
+  const time = Date.now()
 
   localPath = config.paths.archive
   dataPath = config.paths.data

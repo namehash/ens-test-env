@@ -1,7 +1,7 @@
-import { config } from 'dotenv'
 import fs from 'node:fs'
-import yaml from 'js-yaml'
 import path from 'node:path'
+import { config } from 'dotenv'
+import yaml from 'js-yaml'
 
 export const main = (options) => {
   const directory = path.resolve(process.cwd(), options.directory)

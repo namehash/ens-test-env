@@ -2,9 +2,9 @@
 
 /* eslint-disable */
 
-import { Command, Option } from 'commander'
 import path from 'node:path'
 import { emitKeypressEvents } from 'node:readline'
+import { Command, Option } from 'commander'
 import { main as fetchData } from './fetch-data.js'
 import { main as manager } from './manager.js'
 import { main as subgraph } from './subgraph.js'
@@ -25,7 +25,7 @@ program
     if (program.optsWithGlobals().alwaysCleanup) {
       emitKeypressEvents(process.stdin)
       if (process.stdin.isTTY) process.stdin.setRawMode(true)
-      process.stdin.on('keypress', (char, key) => {
+      process.stdin.on('keypress', (_char, key) => {
         if (key.ctrl && key.name === 'c') {
           process.kill(process.pid, 'SIGINT')
         }
