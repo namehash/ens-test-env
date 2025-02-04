@@ -23,6 +23,9 @@
 			},
 			"performance": {
 				"noAccumulatingSpread": "off"
+			},
+			"suspicious": {
+				"noAssignInExpressions": "off"
 			}
 		}
 	},

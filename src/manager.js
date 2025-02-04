@@ -16,6 +16,9 @@ const exitedBuffer = Buffer.from('exited with code 1')
 
 let initialFinished = false
 let cleanupRunning = false
+/**
+ * @type {import('docker-compose').IDockerComposeOptions}
+ */
 const opts = {
   log: true,
   composeOptions: ['-p', 'ens-test-env'],
@@ -34,8 +37,16 @@ const getCompose = async () => {
  * */
 let commands
 let options
+/**
+ * @type {import('./config').ENSTestEnvConfig}
+ */
 let config
 
+/**
+ *
+ * @param {object[]} items
+ * @returns
+ */
 const batchRpcFetch = (items) =>
   fetch('http://localhost:8545', {
     method: 'POST',
@@ -47,6 +58,12 @@ const batchRpcFetch = (items) =>
     ),
   }).then((res) => res.json())
 
+/**
+ *
+ * @param {string} method
+ * @param {*} params
+ * @returns
+ */
 const rpcFetch = (method, params) =>
   batchRpcFetch([{ method, params }]).then((res) => res[0])
 
@@ -103,23 +120,31 @@ async function cleanup(_, exitCode) {
 
   process.exit(exitCode ? 1 : 0)
 }
-
+/**
+ *
+ * @param {string | Buffer} prefix
+ * @returns
+ */
 const makePrepender = (prefix) =>
   new Transform({
     transform(chunk, _, done) {
+      // @ts-expect-error
       this._rest = this._rest?.length
-        ? Buffer.concat([this._rest, chunk])
+        ? // @ts-expect-error
+          Buffer.concat([this._rest, chunk])
         : chunk
 
       let index
 
       // As long as we keep finding newlines, keep making slices of the buffer and push them to the
       // readable side of the transform stream
-      // biome-ignore lint/suspicious/noAssignInExpressions: <explanation>
+      // @ts-expect-error
       while ((index = this._rest.indexOf('\n')) !== -1) {
         // The `end` parameter is non-inclusive, so increase it to include the newline we found
+        // @ts-expect-error
         const line = this._rest.slice(0, ++index)
         // `start` is inclusive, but we are already one char ahead of the newline -> all good
+        // @ts-expect-error
         this._rest = this._rest.slice(index)
         // We have a single line here! Prepend the string we want
         this.push(Buffer.concat([prefix, line]))
@@ -132,12 +157,20 @@ const makePrepender = (prefix) =>
     // data that we have saved
     flush(done) {
       // If we have any remaining data in the cache, send it out
-      if (this._rest?.length) {
+
+      // @ts-expect-error
+      if (this._rest?.length)
+        // @ts-expect-error
         return void done(null, Buffer.concat([prefix, this._rest]))
-      }
     },
   })
 
+/**
+ *
+ * @param {string} name
+ * @param {*} command
+ * @returns
+ */
 const awaitCommand = async (name, command) => {
   const allArgs = command.split(' ')
   const deploy = spawn(allArgs.shift(), allArgs, {
@@ -154,7 +187,13 @@ const awaitCommand = async (name, command) => {
   deploy.stderr.pipe(errPrepender).pipe(process.stderr)
   return new Promise((resolve) => deploy.on('exit', () => resolve()))
 }
-
+/**
+ *
+ * @param {import('./config').ENSTestEnvConfig} _config
+ * @param {*} _options
+ * @param {boolean} [justKill]
+ * @returns
+ */
 export const main = async (_config, _options, justKill) => {
   config = _config
   options = _options
@@ -167,7 +206,7 @@ export const main = async (_config, _options, justKill) => {
     DATA_FOLDER: config.paths.data,
     GRAPH_LOG_LEVEL: 'info',
     ANVIL_EXTRA_ARGS: '',
-    BLOCK_TIMESTAMP: Math.floor(new Date().getTime() / 1000),
+    BLOCK_TIMESTAMP: Math.floor(new Date().getTime() / 1000).toString(),
   }
 
   if (justKill) {

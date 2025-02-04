@@ -8,7 +8,7 @@ export interface ENSTestEnvConfig {
   deployCommand?: string
   buildCommand?: string
   labelHashes?: { hash: string; label: string }[]
-  scripts?: (ConcurrentlyCommandInput & {
+  scripts?: (Exclude<ConcurrentlyCommandInput, string> & {
     finishOnExit?: boolean
   })[]
   paths?: {

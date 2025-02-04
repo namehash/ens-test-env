@@ -9,6 +9,9 @@ import { main as fetchData } from './fetch-data.js'
 import { main as manager } from './manager.js'
 import { main as subgraph } from './subgraph.js'
 
+/**
+ * @type {import('./config').ENSTestEnvConfig}
+ */
 let config
 const program = new Command()
 
@@ -48,7 +51,7 @@ program
     // if config doesn't have all data, throw error
     if (!config) {
       program.error('No valid config found')
-      return help()
+      return program.help()
     }
     // add default paths to config, and let them be replaced by specified vars
     const paths = {
