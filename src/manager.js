@@ -5,19 +5,6 @@ import compose from 'docker-compose'
 import { Transform } from 'node:stream'
 import waitOn from 'wait-on'
 import { main as fetchData } from './fetch-data.js'
-import fetch from 'node-fetch'
-import http from 'node:http'
-import https from 'node:https'
-
-const httpAgent = new http.Agent({ keepAlive: true })
-const httpsAgent = new https.Agent({ keepAlive: true })
-const agentSelector = function (_parsedURL) {
-  if (_parsedURL.protocol == 'http:') {
-    return httpAgent
-  } else {
-    return httpsAgent
-  }
-}
 
 let outputsToIgnore = [
   Buffer.from('eth_getBlockByNumber'),
@@ -55,7 +42,6 @@ const batchRpcFetch = (items) =>
     headers: {
       'Content-Type': 'application/json',
     },
-    agent: agentSelector,
     body: JSON.stringify(
       items.map((item, i) => ({ jsonrpc: '2.0', id: i + 1, ...item })),
     ),
@@ -367,7 +353,6 @@ export const main = async (_config, _options, justKill) => {
           headers: {
             'Content-Type': 'application/json',
           },
-          agent: agentSelector,
           body: JSON.stringify({
             query: `
             {

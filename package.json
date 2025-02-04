@@ -16,7 +16,6 @@
     "docker-compose": "^1.1.0",
     "dotenv": "^16.0.1",
     "js-yaml": "^4.1.0",
-    "node-fetch": "2",
     "picocolors": "^1.1.1",
     "progress-stream": "^2.0.0",
     "tar-fs": "^2.1.1",
