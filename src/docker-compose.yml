@@ -1,35 +1,24 @@
 services:
   anvil:
-    image: ghcr.io/ensdomains/anvil:next
+    image: ghcr.io/foundry-rs/foundry:latest
     ports:
       - '8545:8545'
     entrypoint: /bin/sh -c 'anvil --chain-id 1337 --gas-limit 50000000 --timestamp 1640995200 $ANVIL_EXTRA_ARGS'
     environment:
       ANVIL_IP_ADDR: '0.0.0.0'
   graph-node:
-    image: graphprotocol/graph-node:v0.30.0
+    image: namehash/ensnode:latest
     ports:
-      - '8000:8000'
-      - '8001:8001'
-      - '8020:8020'
-      - '8030:8030'
-      - '8040:8040'
+      - '42069:42069'
     depends_on:
-      - ipfs
       - postgres
       - anvil
     environment:
-      postgres_host: postgres
-      postgres_user: graph-node
-      postgres_pass: let-me-in
-      postgres_db: graph-node
-      ipfs: 'ipfs:5001'
-      ethereum: 'mainnet:http://anvil:8545'
-      GRAPH_LOG: $GRAPH_LOG_LEVEL
-      GRAPH_ALLOW_NON_DETERMINISTIC_IPFS: 'true'
-      GRAPH_ETHEREUM_CLEANUP_BLOCKS: 'true'
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
+      DATABASE_SCHEMA: public
+      DATABASE_URL: postgresql://graph-node:let-me-in@postgres:5432/graph-node
+      RPC_URL_1337: http://anvil:8545
+      ENS_DEPLOYMENT_CHAIN: ens-test-env
+      ACTIVE_PLUGINS: eth
   ipfs:
     image: ipfs/kubo:v0.16.0
     ports:

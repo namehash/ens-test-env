@@ -18,6 +18,8 @@ const program = new Command()
 const __dirname = new URL('.', import.meta.url).pathname
 const cwd = process.cwd()
 
+console.log('HELLO FROM LOCAL')
+
 program
   .name('ens-test-env')
   .description('A testing environment for everything ENS')
