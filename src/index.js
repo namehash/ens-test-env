@@ -7,7 +7,6 @@ import { emitKeypressEvents } from 'node:readline'
 import { Command, Option } from 'commander'
 import { main as fetchData } from './fetch-data.js'
 import { main as manager } from './manager.js'
-import { main as subgraph } from './subgraph.js'
 
 /**
  * @type {import('./config').ENSTestEnvConfig}
@@ -86,7 +85,7 @@ program
       'Sets the relative extra time for deploys',
     ).conflicts('save'),
   )
-  .addOption(new Option('--no-graph', "Don't start the graph"))
+  .addOption(new Option('--no-ensnode', "Don't start ENSNode"))
   .addOption(new Option('-k, --kill-gracefully', 'Kill gracefully'))
   .addOption(new Option('--no-build', "Don't run the build command"))
   .addOption(new Option('--no-scripts', "Don't run the scripts"))
@@ -98,7 +97,7 @@ program
     if (options.save) {
       await fetchData('clean', config)
     } else if (options.reset) {
-      await fetchData('load', config)
+      // await fetchData('load', config)
     }
     manager(config, options)
   })
@@ -122,24 +121,6 @@ program
   .description('Saves data folder to an archive')
   .action(async () => {
     await fetchData('compress', config)
-  })
-
-program
-  .command('subgraph')
-  .description('Saves the deployment addresses to a subgraph file')
-  .option('-d, --directory <path>', 'The subgraph directory', '../ens-subgraph')
-  .option(
-    '--env <path>',
-    'The environment file with the deployment addresses',
-    '.env.local',
-  )
-  .option(
-    '--var <name>',
-    'The variable name in the environment file',
-    'DEPLOYMENT_ADDRESSES',
-  )
-  .action(async (options) => {
-    subgraph(options)
   })
 
 program.parse(process.argv)

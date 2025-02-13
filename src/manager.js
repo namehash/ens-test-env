@@ -10,6 +10,12 @@ let outputsToIgnore = [
   Buffer.from('eth_getBlockByNumber'),
   Buffer.from('eth_getBlockByHash'),
   Buffer.from('eth_getTransactionReceipt'),
+  Buffer.from('eth_blockNumber'),
+  Buffer.from('eth_chainId'),
+  Buffer.from('eth_getLogs'),
+  Buffer.from('evm_snapshot'),
+  Buffer.from('evm_revert'),
+  Buffer.from('eth_call'),
 ]
 
 const exitedBuffer = Buffer.from('exited with code 1')
@@ -67,7 +73,7 @@ const batchRpcFetch = (items) =>
 const rpcFetch = (method, params) =>
   batchRpcFetch([{ method, params }]).then((res) => res[0])
 
-async function cleanup(_, exitCode) {
+async function cleanup(exitCode) {
   const compose = await getCompose()
   let force = false
   if (cleanupRunning) {
@@ -187,6 +193,39 @@ const awaitCommand = async (name, command) => {
   deploy.stderr.pipe(errPrepender).pipe(process.stderr)
   return new Promise((resolve) => deploy.on('exit', () => resolve()))
 }
+
+/**
+ * logs containers by name, starting cleanup if they exit
+ * @param {string[]} names
+ */
+const logContainers = async (names) => {
+  compose
+    .logs(names, {
+      ...opts,
+      log: false,
+      follow: verbosity > 0,
+      callback: (chunk, source) => {
+        if (source === 'stderr') {
+          process.stderr.write(chunk)
+        } else {
+          for (let i = 0; i < outputsToIgnore.length; i++) {
+            if (chunk.includes(outputsToIgnore[i])) return
+          }
+          if (chunk.includes(exitedBuffer)) {
+            return cleanup(
+              Number.parseInt(chunk.toString().split('exited with code ')[1]),
+            )
+          }
+          process.stdout.write(chunk)
+        }
+      },
+    })
+    .catch((e) => {
+      console.error(e)
+      cleanup(1)
+    })
+}
+
 /**
  *
  * @param {import('./config').ENSTestEnvConfig} _config
@@ -199,19 +238,16 @@ export const main = async (_config, _options, justKill) => {
   options = _options
   verbosity = Number.parseInt(options.verbosity)
 
-  console.log(config, options)
-
   opts.cwd = config.paths.composeFile.split('/docker-compose.yml')[0]
 
   opts.env = {
     ...process.env,
+    // TODO: remove if no archive & ephemeral postgres
     DATA_FOLDER: config.paths.data,
+    // TODO: remove, not necessary
     ANVIL_EXTRA_ARGS: '',
+    // TODO: remove, not used?
     BLOCK_TIMESTAMP: Math.floor(new Date().getTime() / 1000).toString(),
-  }
-
-  if (justKill) {
-    return cleanup(undefined, 'SIGINT')
   }
 
   if (options.verbosity >= 2) {
@@ -219,38 +255,12 @@ export const main = async (_config, _options, justKill) => {
     opts.env.ANVIL_EXTRA_ARGS = '--tracing'
   }
 
+  if (justKill) return cleanup('SIGINT')
+
+  // log the config we're using
+  if (verbosity >= 1) console.log({ config, options })
+
   const compose = await getCompose()
-
-  try {
-    await compose.upOne('anvil', opts)
-  } catch (e) {
-    console.error('e: ', e)
-  }
-
-  compose
-    .logs(['anvil', 'graph-node', 'postgres', 'ipfs', 'metadata'], {
-      ...opts,
-      log: false,
-      follow: verbosity > 0,
-      callback: (chunk, source) => {
-        if (source === 'stderr') {
-          process.stderr.write(chunk)
-        } else {
-          for (let i = 0; i < outputsToIgnore.length; i++) {
-            if (chunk.includes(outputsToIgnore[i])) return
-          }
-          if (chunk.includes(exitedBuffer)) {
-            cleanup(
-              undefined,
-              Number.parseInt(chunk.toString().split('exited with code ')[1]),
-            )
-            return
-          }
-          process.stdout.write(chunk)
-        }
-      },
-    })
-    .catch(() => {})
 
   const inxsToFinishOnExit = []
   const cmdsToRun = (config.scripts || []).map(
@@ -260,12 +270,12 @@ export const main = async (_config, _options, justKill) => {
     },
   )
 
-  if (cleanupRunning) return
-
+  // start anvil & wait for rpc
+  await compose.upOne('anvil', opts)
+  logContainers(['anvil'])
   await waitOn({ resources: ['tcp:localhost:8545'] })
 
-  // wait 1000 ms to make sure the server is up
-  await new Promise((resolve) => setTimeout(resolve, 1000))
+  if (cleanupRunning) return
 
   if (!options.save) {
     if (!options.extraTime) {
@@ -283,8 +293,10 @@ export const main = async (_config, _options, justKill) => {
       await rpcFetch('anvil_setNextBlockTimestamp', [timestamp])
     }
 
+    // set block timestamp interval before deploy
     await rpcFetch('anvil_setBlockTimestampInterval', [1])
 
+    // wait for deploy
     await awaitCommand('deploy', config.deployCommand)
 
     // remove block timestamp interval after deploy
@@ -295,7 +307,7 @@ export const main = async (_config, _options, justKill) => {
         '\x1b[1;34m[config]\x1b[0m ',
         'Exiting after contract deployment...',
       )
-      return cleanup(undefined, 0)
+      return cleanup(0)
     }
 
     if (options.extraTime) {
@@ -316,55 +328,58 @@ export const main = async (_config, _options, justKill) => {
     }
   }
 
+  const { result } = await rpcFetch('eth_blockNumber', [])
+  const blockheight = Number.parseInt(result.slice(2), 16)
+  console.log(`Anvil at blockheight ${blockheight}`)
+
   initialFinished = true
 
   if (cleanupRunning) return
 
-  if (options.graph) {
-    try {
-      await compose.upAll(opts)
-    } catch {}
+  if (options.ensnode) {
+    // start ensnode container
+    await compose.upOne('ensnode', opts)
 
+    logContainers(['ensnode', 'ensrainbow', 'postgres'])
+
+    // wait for server to be available
     await waitOn({ resources: ['http://localhost:42069'] })
+
+    let currentBlockheight = 0
+    // getter for current indexed blockheight
+    const getCurrentBlock = async () =>
+      // TODO: once _meta is available on subgraph-compat schema, use that
+      fetch('http://localhost:42069', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: '{ _meta { status } }', variables: {} }),
+      })
+        .then((res) => res.json())
+        .then((res) => {
+          if (res.errors) {
+            console.error(res.errors)
+            return 0
+          }
+          const blockNumber = res.data._meta.status['1337'].block?.number
+          if (!blockNumber) throw new Error('not ready')
+          return blockNumber
+        })
+        .catch(() => 0)
+
+    // wait for indexer to reach blockNumber
+    while (currentBlockheight < blockheight) {
+      currentBlockheight = await getCurrentBlock()
+      if (verbosity >= 1) {
+        console.log(
+          `ENSNode at blockheight: ${currentBlockheight}, need ${blockheight}`,
+        )
+      }
+      // sleep
+      await new Promise((resolve) => setTimeout(resolve, 500))
+    }
   }
 
   if (!options.save && cmdsToRun.length > 0 && options.scripts) {
-    if (options.graph) {
-      const indexArray = []
-      const getCurrentIndex = async () =>
-        // TODO: once _meta is available on subgraph-compat schema, use that
-        fetch('http://localhost:42069', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query: `{ _meta { status } }`,
-            variables: {},
-          }),
-        })
-          .then((res) => res.json())
-          .then((res) => {
-            if (res.errors) {
-              console.error(res.errors)
-              return 0
-            }
-            const blockNumber = res.data._meta.status['1337'].block?.number;
-            if (!blockNumber) throw new Error(`not ready`)
-            console.log(`ENSNode at ${blockNumber}`)
-            return blockNumber
-          })
-          .catch(() => 0)
-      do {
-        indexArray.push(await getCurrentIndex())
-        if (indexArray.length > 10) indexArray.shift()
-        await new Promise((resolve) => setTimeout(resolve, 100))
-      } while (
-        !indexArray.every((i) => i === indexArray[0]) ||
-        indexArray.length < 2 ||
-        indexArray[0] === 0
-      )
-    }
     /**
      * @type {import('concurrently').ConcurrentlyResult['result']}
      **/
@@ -375,10 +390,10 @@ export const main = async (_config, _options, justKill) => {
 
     commands.forEach((cmd) => {
       if (inxsToFinishOnExit.includes(cmd.index)) {
-        cmd.close.subscribe(({ exitCode }) => cleanup(undefined, exitCode))
+        cmd.close.subscribe(({ exitCode }) => cleanup(exitCode))
       } else {
         cmd.close.subscribe(
-          ({ exitCode }) => exitCode === 0 || cleanup(undefined, exitCode),
+          ({ exitCode }) => exitCode === 0 || cleanup(exitCode),
         )
       }
     })

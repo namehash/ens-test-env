@@ -1,51 +1,56 @@
 services:
   anvil:
+    container_name: anvil
     image: ghcr.io/foundry-rs/foundry:latest
+    entrypoint: /bin/sh -c 'anvil --chain-id 1337 --gas-limit 50000000 --timestamp 1640995200 $ANVIL_EXTRA_ARGS'
     ports:
       - '8545:8545'
-    entrypoint: /bin/sh -c 'anvil --chain-id 1337 --gas-limit 50000000 --timestamp 1640995200 $ANVIL_EXTRA_ARGS'
     environment:
       ANVIL_IP_ADDR: '0.0.0.0'
-  graph-node:
+
+  ensnode:
+    container_name: ensnode
     image: namehash/ensnode:latest
     ports:
       - '42069:42069'
     depends_on:
       - postgres
       - anvil
+      - ensrainbow
     environment:
-      DATABASE_SCHEMA: public
-      DATABASE_URL: postgresql://graph-node:let-me-in@postgres:5432/graph-node
+      DATABASE_SCHEMA: ens-test-env
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/ens-test-env
+      ENSRAINBOW_URL: http://ensrainbow:3223
       RPC_URL_1337: http://anvil:8545
       ENS_DEPLOYMENT_CHAIN: ens-test-env
       ACTIVE_PLUGINS: eth
-  ipfs:
-    image: ipfs/kubo:v0.16.0
-    ports:
-      - '5001:5001'
-    volumes:
-      - $DATA_FOLDER/ipfs:/data/ipfs
-  postgres:
-    image: postgres:14-alpine
-    ports:
-      - '5432:5432'
-    command: ['postgres', '-cshared_preload_libraries=pg_stat_statements']
+
+  ensrainbow:
+    container_name: ensrainbow
+    image: namehash/ensrainbow:latest
     environment:
-      POSTGRES_USER: graph-node
-      POSTGRES_PASSWORD: let-me-in
-      POSTGRES_DB: graph-node
-      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
-    volumes:
-      - $DATA_FOLDER/postgres:/var/lib/postgresql/data
+      LOG_LEVEL: error
+
+  postgres:
+    container_name: postgres
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ens-test-env
+    tmpfs:
+      - /var/lib/postgresql/data
+
   metadata:
+    container_name: metadata
     image: ghcr.io/ensdomains/ens-metadata-service:latest
     depends_on:
       - anvil
-      - graph-node
+      - ensnode
     ports:
       - '8080:8080'
     environment:
       - ADDRESS_ETH_REGISTRAR=$ADDRESS_ETH_REGISTRAR
       - ADDRESS_NAME_WRAPPER=$ADDRESS_NAME_WRAPPER
       - RPC_PROVIDER=http://anvil:8545
-      - SUBGRAPH_URL=http://graph-node:8000/subgraphs/name/graphprotocol/ens
+      - SUBGRAPH_URL=http://ensnode:42069/subgraph
