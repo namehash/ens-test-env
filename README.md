@@ -1,13 +1,5 @@
 # ens-test-env
 
-## TODO
-
-- [ ] what's up with the archive and the loading/compressing/etc
-  - can this be entirely removed?
-- [ ] should forking be allowed? only if addresses stay deterministic, right?
-- [ ] readme needs to be updated for new patterns
-- [ ] can/should metadata image def be removed? not used.
-
 ## How it works
 
 The testing environment used here is implemented in the stateless and stateful tests for ENS app. The environment consists of two parts: the anvil Ethereum node, and the docker ENSNode instance. Which environment type you use is dependent on your testing circumstances.
