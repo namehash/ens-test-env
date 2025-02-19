@@ -202,8 +202,8 @@ const logContainers = async (names) => {
   compose
     .logs(names, {
       ...opts,
-      log: false,
-      follow: verbosity > 0,
+      log: true,
+      follow: true,
       callback: (chunk, source) => {
         if (source === 'stderr') {
           process.stderr.write(chunk)
@@ -272,7 +272,7 @@ export const main = async (_config, _options, justKill) => {
 
   // start anvil & wait for rpc
   await compose.upOne('anvil', opts)
-  logContainers(['anvil'])
+  if (verbosity >= 1) logContainers(['anvil'])
   await waitOn({ resources: ['tcp:localhost:8545'] })
 
   if (cleanupRunning) return
@@ -293,13 +293,13 @@ export const main = async (_config, _options, justKill) => {
       await rpcFetch('anvil_setNextBlockTimestamp', [timestamp])
     }
 
-    // set block timestamp interval before deploy
+    // set block timestamp interval before deploy (necessary for deploy to succeed)
     await rpcFetch('anvil_setBlockTimestampInterval', [1])
 
     // wait for deploy
     await awaitCommand('deploy', config.deployCommand)
 
-    // remove block timestamp interval after deploy
+    // remove block timestamp interval after deploy (necessary for some tests to pass)
     await rpcFetch('anvil_removeBlockTimestampInterval', [])
 
     if (options.exitAfterDeploy) {
@@ -310,19 +310,24 @@ export const main = async (_config, _options, justKill) => {
       return cleanup(0)
     }
 
+    // set to current time
     if (options.extraTime) {
-      // snapshot before setting current time
-      await rpcFetch('evm_snapshot', [])
       // set to current time
       await rpcFetch('anvil_setNextBlockTimestamp', [
         Math.floor(Date.now() / 1000),
       ])
-      // mine block for graph node to update
+
+      // manually mine block
+      // NOTE: this was originally required for graph-node to register an update but in this fork
+      // we use ENSNode, which doesn't have this requirement. that said, this line must remain,
+      // because otherwise tests fail (not sure why)
       await rpcFetch('evm_mine', [])
-      // snapshot after setting current time
-      await rpcFetch('evm_snapshot', [])
     }
 
+    // snapshot (necesssary so tests can easily reset to this point)
+    await rpcFetch('evm_snapshot', [])
+
+    // if there's a build command, run it
     if (config.buildCommand && options.build) {
       await awaitCommand('build', config.buildCommand)
     }
@@ -340,7 +345,7 @@ export const main = async (_config, _options, justKill) => {
     // start ensnode container
     await compose.upOne('ensnode', opts)
 
-    logContainers(['ensnode', 'ensrainbow', 'postgres'])
+    if (verbosity >= 1) logContainers(['ensnode', 'ensrainbow', 'postgres'])
 
     // wait for server to be available
     await waitOn({ resources: ['http://localhost:42069'] })
