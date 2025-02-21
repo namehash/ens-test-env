@@ -5,7 +5,6 @@
 import path from 'node:path'
 import { emitKeypressEvents } from 'node:readline'
 import { Command, Option } from 'commander'
-import { main as fetchData } from './fetch-data.js'
 import { main as manager } from './manager.js'
 
 /**
@@ -16,8 +15,6 @@ const program = new Command()
 
 const __dirname = new URL('.', import.meta.url).pathname
 const cwd = process.cwd()
-
-console.log('HELLO FROM LOCAL')
 
 program
   .name('ens-test-env')
@@ -56,8 +53,6 @@ program
     }
     // add default paths to config, and let them be replaced by specified vars
     const paths = {
-      data: path.resolve(cwd, './data'),
-      archive: path.resolve(cwd, './archive'),
       composeFile: path.resolve(__dirname, './docker-compose.yml'),
     }
     const configPaths = config.paths || {}
@@ -72,13 +67,6 @@ program
 program
   .command('start')
   .description('Starts the test environment')
-  .addOption(new Option('--no-reset', "Don't reset the data folder"))
-  .addOption(
-    new Option('-s, --save', 'Save data when exiting').implies({
-      killGracefully: true,
-      verbosity: 1,
-    }),
-  )
   .addOption(
     new Option(
       '--extra-time <time>',
@@ -94,33 +82,14 @@ program
   )
   .addOption(new Option('--exit-after-deploy', 'Exit after deploying'))
   .action(async (options) => {
-    if (options.save) {
-      await fetchData('clean', config)
-    } else if (options.reset) {
-      // await fetchData('load', config)
-    }
-    manager(config, options)
+    await manager(config, options)
   })
 
 program
   .command('kill')
   .description('Forcefully kills the test environment')
   .action(async () => {
-    manager(config, {}, true)
-  })
-
-program
-  .command('load')
-  .description('Fetches data from archive')
-  .action(async () => {
-    await fetchData('load', config)
-  })
-
-program
-  .command('save')
-  .description('Saves data folder to an archive')
-  .action(async () => {
-    await fetchData('compress', config)
+    await manager(config, {}, true)
   })
 
 program.parse(process.argv)

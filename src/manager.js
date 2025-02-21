@@ -4,8 +4,9 @@ import { Transform } from 'node:stream'
 import concurrently from 'concurrently'
 import compose from 'docker-compose'
 import waitOn from 'wait-on'
-import { main as fetchData } from './fetch-data.js'
 
+// ignore outputs from docker-compose if they contain any of these buffers, helpful for ignoring
+// verbose logs (esp. from anvil during deploy script)
 let outputsToIgnore = [
   Buffer.from('eth_getBlockByNumber'),
   Buffer.from('eth_getBlockByHash'),
@@ -16,8 +17,12 @@ let outputsToIgnore = [
   Buffer.from('evm_snapshot'),
   Buffer.from('evm_revert'),
   Buffer.from('eth_call'),
+  Buffer.from('eth_estimateGas'),
+  Buffer.from('eth_feeHistory'),
+  Buffer.from('eth_sendTransaction'),
 ]
 
+// detects container exits in docker-compose logs
 const exitedBuffer = Buffer.from('exited with code 1')
 
 let initialFinished = false
@@ -113,9 +118,6 @@ async function cleanup(exitCode) {
         }),
       )
       .catch(() => {})
-    if (options.save) {
-      await fetchData('compress', config)
-    }
   }
 
   commands?.forEach((command) => {
@@ -202,28 +204,79 @@ const logContainers = async (names) => {
   compose
     .logs(names, {
       ...opts,
-      log: true,
+      log: false,
       follow: true,
       callback: (chunk, source) => {
-        if (source === 'stderr') {
-          process.stderr.write(chunk)
-        } else {
-          for (let i = 0; i < outputsToIgnore.length; i++) {
-            if (chunk.includes(outputsToIgnore[i])) return
-          }
-          if (chunk.includes(exitedBuffer)) {
-            return cleanup(
-              Number.parseInt(chunk.toString().split('exited with code ')[1]),
-            )
-          }
-          process.stdout.write(chunk)
+        // check for exit buffer
+        if (chunk.includes(exitedBuffer)) {
+          return cleanup(
+            Number.parseInt(chunk.toString().split('exited with code ')[1]),
+          )
         }
+
+        // forward stderr
+        if (source === 'stderr') return process.stderr.write(chunk)
+
+        // ignore log if verbosity 0
+        if (verbosity === 0) return
+
+        // ignore any output that matches 'ignoreOutput' buffers
+        const ignoreOutput = outputsToIgnore.some((ignoreBuffer) =>
+          chunk.includes(ignoreBuffer),
+        )
+        if (ignoreOutput) return
+
+        // forward stdout
+        return process.stdout.write(chunk)
       },
     })
     .catch((e) => {
       console.error(e)
       cleanup(1)
     })
+}
+
+/**
+ *
+ * @param {number} blockheight
+ */
+const waitForENSNode = async (blockheight) => {
+  // wait for server to be available
+  await waitOn({ resources: ['http://localhost:42069'] })
+
+  let currentBlockheight = 0
+  // getter for current indexed blockheight
+  const getCurrentBlock = async () =>
+    // TODO: once _meta is available on subgraph-compat schema, use that
+    fetch('http://localhost:42069', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: '{ _meta { status } }', variables: {} }),
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        if (res.errors) {
+          console.error(res.errors)
+          return 0
+        }
+        const blockNumber = res.data._meta.status['1337'].block?.number
+        if (!blockNumber) throw new Error('not ready')
+        return blockNumber
+      })
+      .catch(() => 0)
+
+  // wait for indexer to reach blockNumber
+  while (currentBlockheight < blockheight) {
+    currentBlockheight = await getCurrentBlock()
+    if (verbosity >= 1) {
+      console.log(
+        `ENSNode at blockheight: ${currentBlockheight}, need ${blockheight}`,
+      )
+    }
+
+    // sleep
+    await new Promise((resolve) => setTimeout(resolve, 500))
+  }
 }
 
 /**
@@ -239,20 +292,17 @@ export const main = async (_config, _options, justKill) => {
   verbosity = Number.parseInt(options.verbosity)
 
   opts.cwd = config.paths.composeFile.split('/docker-compose.yml')[0]
+  opts.env = { ...process.env }
 
-  opts.env = {
-    ...process.env,
-    // TODO: remove if no archive & ephemeral postgres
-    DATA_FOLDER: config.paths.data,
-    // TODO: remove, not necessary
-    ANVIL_EXTRA_ARGS: '',
-    // TODO: remove, not used?
-    BLOCK_TIMESTAMP: Math.floor(new Date().getTime() / 1000).toString(),
-  }
-
-  if (options.verbosity >= 2) {
+  // if verbosity is high enough
+  if (verbosity >= 2) {
+    // unset outputsToIgnore (log everything)
     outputsToIgnore = []
+    // enforce anvil tracing logs
     opts.env.ANVIL_EXTRA_ARGS = '--tracing'
+  } else {
+    // silence 'variable is not set' warning
+    opts.env.ANVIL_EXTRA_ARGS = ''
   }
 
   if (justKill) return cleanup('SIGINT')
@@ -271,71 +321,71 @@ export const main = async (_config, _options, justKill) => {
   )
 
   // start anvil & wait for rpc
+  console.log('Starting anvil...')
   await compose.upOne('anvil', opts)
-  if (verbosity >= 1) logContainers(['anvil'])
+  logContainers(['anvil'])
   await waitOn({ resources: ['tcp:localhost:8545'] })
+  console.log('↳ done.')
 
+  // bail if cleaning up
   if (cleanupRunning) return
 
-  if (!options.save) {
-    if (!options.extraTime) {
-      // set next block timestamp to ensure consistent hashes
-      await rpcFetch('anvil_setNextBlockTimestamp', [1640995200])
-    } else {
-      const timestamp =
-        Math.floor(Date.now() / 1000) - Number.parseInt(options.extraTime)
-      console.log(
-        '\x1b[1;34m[config]\x1b[0m ',
-        'setting timestamp to',
-        timestamp,
-      )
-      // set next block timestamp relative to current time
-      await rpcFetch('anvil_setNextBlockTimestamp', [timestamp])
-    }
-
-    // set block timestamp interval before deploy (necessary for deploy to succeed)
-    await rpcFetch('anvil_setBlockTimestampInterval', [1])
-
-    // wait for deploy
-    await awaitCommand('deploy', config.deployCommand)
-
-    // remove block timestamp interval after deploy (necessary for some tests to pass)
-    await rpcFetch('anvil_removeBlockTimestampInterval', [])
-
-    if (options.exitAfterDeploy) {
-      console.log(
-        '\x1b[1;34m[config]\x1b[0m ',
-        'Exiting after contract deployment...',
-      )
-      return cleanup(0)
-    }
-
-    // set to current time
-    if (options.extraTime) {
-      // set to current time
-      await rpcFetch('anvil_setNextBlockTimestamp', [
-        Math.floor(Date.now() / 1000),
-      ])
-
-      // manually mine block
-      // NOTE: this was originally required for graph-node to register an update but in this fork
-      // we use ENSNode, which doesn't have this requirement. that said, this line must remain,
-      // because otherwise tests fail (not sure why)
-      await rpcFetch('evm_mine', [])
-    }
-
-    // snapshot (necesssary so tests can easily reset to this point)
-    await rpcFetch('evm_snapshot', [])
-
-    // if there's a build command, run it
-    if (config.buildCommand && options.build) {
-      await awaitCommand('build', config.buildCommand)
-    }
+  // set block timestamp
+  if (options.extraTime) {
+    const timestamp =
+      Math.floor(Date.now() / 1000) - Number.parseInt(options.extraTime)
+    console.log('\x1b[1;34m[config]\x1b[0m ', 'setting timestamp to', timestamp)
+    // set next block timestamp relative to current time
+    await rpcFetch('anvil_setNextBlockTimestamp', [timestamp])
+  } else {
+    // set next block timestamp to ensure consistent hashes
+    await rpcFetch('anvil_setNextBlockTimestamp', [1640995200])
   }
 
-  const { result } = await rpcFetch('eth_blockNumber', [])
-  const blockheight = Number.parseInt(result.slice(2), 16)
-  console.log(`Anvil at blockheight ${blockheight}`)
+  // set block timestamp interval before deploy (necessary for deploy to succeed)
+  await rpcFetch('anvil_setBlockTimestampInterval', [1])
+
+  // wait for deploy
+  console.log('Running deploy script...')
+  await awaitCommand('deploy', config.deployCommand)
+  console.log('↳ done.')
+
+  // remove block timestamp interval after deploy (necessary for some tests to pass)
+  await rpcFetch('anvil_removeBlockTimestampInterval', [])
+
+  // if exiting after deploy, cleanup here
+  if (options.exitAfterDeploy) {
+    console.log(
+      '\x1b[1;34m[config]\x1b[0m ',
+      'Exiting after contract deployment...',
+    )
+    return cleanup(0)
+  }
+
+  // TODO: can we run this logic every time?
+  // set to current time
+  if (options.extraTime) {
+    // set to current time
+    await rpcFetch('anvil_setNextBlockTimestamp', [
+      Math.floor(Date.now() / 1000),
+    ])
+
+    // manually mine block
+    // NOTE: this was originally required for graph-node to register an update but in this fork
+    // we use ENSNode, which doesn't have this requirement. that said, this line must remain,
+    // because otherwise tests fail (not sure why)
+    await rpcFetch('evm_mine', [])
+  }
+
+  // snapshot (necesssary so tests can easily reset to this point)
+  await rpcFetch('evm_snapshot', [])
+
+  // if there's a build command, run it
+  if (config.buildCommand && options.build) {
+    console.log('Running build command...')
+    await awaitCommand('build', config.buildCommand)
+    console.log('↳ done.')
+  }
 
   initialFinished = true
 
@@ -343,48 +393,23 @@ export const main = async (_config, _options, justKill) => {
 
   if (options.ensnode) {
     // start ensnode container
+    console.log('Starting ENSNode...')
     await compose.upOne('ensnode', opts)
+    logContainers(['ensnode', 'ensrainbow', 'postgres'])
+    console.log('↳ done.')
 
-    if (verbosity >= 1) logContainers(['ensnode', 'ensrainbow', 'postgres'])
-
-    // wait for server to be available
-    await waitOn({ resources: ['http://localhost:42069'] })
-
-    let currentBlockheight = 0
-    // getter for current indexed blockheight
-    const getCurrentBlock = async () =>
-      // TODO: once _meta is available on subgraph-compat schema, use that
-      fetch('http://localhost:42069', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: '{ _meta { status } }', variables: {} }),
-      })
-        .then((res) => res.json())
-        .then((res) => {
-          if (res.errors) {
-            console.error(res.errors)
-            return 0
-          }
-          const blockNumber = res.data._meta.status['1337'].block?.number
-          if (!blockNumber) throw new Error('not ready')
-          return blockNumber
-        })
-        .catch(() => 0)
-
-    // wait for indexer to reach blockNumber
-    while (currentBlockheight < blockheight) {
-      currentBlockheight = await getCurrentBlock()
-      if (verbosity >= 1) {
-        console.log(
-          `ENSNode at blockheight: ${currentBlockheight}, need ${blockheight}`,
-        )
-      }
-      // sleep
-      await new Promise((resolve) => setTimeout(resolve, 500))
-    }
+    // wait for it to index to present
+    const { result } = await rpcFetch('eth_blockNumber', [])
+    const blockheight = Number.parseInt(result.slice(2), 16)
+    console.log(`Waiting for ENSNode to index to block ${blockheight}...`)
+    await waitForENSNode(blockheight)
+    console.log('↳ done.')
   }
 
-  if (!options.save && cmdsToRun.length > 0 && options.scripts) {
+  // run commands if specified
+  if (options.scripts && cmdsToRun.length > 0) {
+    console.log('Running scripts...')
+
     /**
      * @type {import('concurrently').ConcurrentlyResult['result']}
      **/
@@ -407,8 +432,8 @@ export const main = async (_config, _options, justKill) => {
   }
 }
 
-//do something when app is closing
+// do something when app is closing
 process.on('exit', cleanup.bind(null, { cleanup: true }))
 
-//catches ctrl+c event
+// catches ctrl+c event
 process.on('SIGINT', cleanup.bind(null, { exit: true }))

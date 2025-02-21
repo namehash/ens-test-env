@@ -1,8 +1,6 @@
 # ens-test-env
 
-## How it works
-
-The testing environment used here is implemented in the stateless and stateful tests for ENS app. The environment consists of two parts: the anvil Ethereum node, and the docker ENSNode instance. Which environment type you use is dependent on your testing circumstances.
+`ens-test-env` runs Anvil and ENSNode for the purposes of testing ENS.
 
 ## Configuration
 
@@ -14,25 +12,6 @@ To run your scripts in the context of the `ens-test-env`, you must provide a con
  **/
 module.exports = {
   deployCommand: 'pnpm hardhat deploy',
-  archive: {
-    subgraphId: 'QmXxAE7Urtv6TPa8o8XmPwLVQNbH6r35hRKHP63udTxTNa',
-    epochTime: 1646894980,
-    blockNumber: 12066620,
-    baseUrl: 'https://storage.googleapis.com/ens-manager-build-data',
-    network: 'mainnet',
-  },
-  docker: {
-    file: './docker-compose.yml',
-    sudo: false,
-  },
-  ethereum: {
-    chain: {
-      chainId: 0,
-    },
-    fork: {
-      url: 'https://example.com',
-    }
-  },
   scripts: [
     {
       command: 'example',
@@ -42,10 +21,6 @@ module.exports = {
       finishOnExit: true,
     },
   ],
-  paths: {
-    archives: './archives',
-    data: './data',
-  },
 }
 ```
 
