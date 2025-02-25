@@ -2,7 +2,7 @@
 
 ## How it works
 
-The testing environment used here is implemented in the stateless and stateful tests for ENS app. The environment consists of two parts: the ganache Ethereum node, and the docker graph instance. Which environment type you use is dependent on your testing circumstances.
+The testing environment used here is implemented in the stateless and stateful tests for ENS app. The environment consists of two parts: the Anvil Ethereum node, and the docker graph instance. Which environment type you use is dependent on your testing circumstances.
 
 ## Configuration
 
