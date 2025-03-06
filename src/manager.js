@@ -247,8 +247,8 @@ const waitForENSNode = async (blockheight) => {
   let currentBlockheight = 0
   // getter for current indexed blockheight
   const getCurrentBlock = async () =>
-    // TODO: once _meta is available on subgraph-compat schema, use that
-    fetch('http://localhost:42069', {
+    // TODO: once _meta is available on subgraph-compat schema (/subgraph), use that
+    fetch('http://localhost:42069/ponder', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: '{ _meta { status } }', variables: {} }),
