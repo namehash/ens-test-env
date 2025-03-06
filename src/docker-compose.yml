@@ -1,8 +1,8 @@
 services:
   anvil:
     container_name: anvil
-    image: ghcr.io/foundry-rs/foundry:latest
-    entrypoint: /bin/sh -c 'anvil --chain-id 1337 --gas-limit 50000000 --timestamp 1640995200 $ANVIL_EXTRA_ARGS'
+    image: ghcr.io/foundry-rs/foundry:stable
+    entrypoint: anvil --chain-id 1337 --gas-limit 50000000 --timestamp 1640995200 $ANVIL_EXTRA_ARGS
     ports:
       - '8545:8545'
     environment:
