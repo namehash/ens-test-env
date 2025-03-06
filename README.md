@@ -24,6 +24,18 @@ module.exports = {
 }
 ```
 
+## Pull Docker Images
+
+To make the initial run faster, consider pulling the ENSNode Docker images separately:
+
+```bash
+docker pull docker.io/library/postgres:17
+docker pull ghcr.io/foundry-rs/foundry:stable
+docker pull ghcr.io/namehash/ensnode/ensindexer:latest
+docker pull ghcr.io/namehash/ensnode/ensrainbow:latest
+docker pull ghcr.io/ensdomains/ens-metadata-service:latest
+```
+
 ## Environment Types
 
 ### Stateless
