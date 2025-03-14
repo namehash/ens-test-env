@@ -32,7 +32,7 @@ To make the initial run faster, consider pulling the ENSNode Docker images separ
 docker pull docker.io/library/postgres:17
 docker pull ghcr.io/foundry-rs/foundry:stable
 docker pull ghcr.io/namehash/ensnode/ensindexer:latest
-docker pull ghcr.io/namehash/ensnode/ensrainbow-ens-test-env:latest
+docker pull ghcr.io/namehash/ensnode/ensrainbow-test:latest
 docker pull ghcr.io/ensdomains/ens-metadata-service:latest
 ```
 
