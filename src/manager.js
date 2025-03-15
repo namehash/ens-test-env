@@ -23,7 +23,10 @@ let outputsToIgnore = [
 ]
 
 // detects container exits in docker-compose logs
-const exitedBuffer = Buffer.from('exited with code 1')
+const exitedBuffers = [
+  Buffer.from('exited with code 1'),
+  Buffer.from('Error response from daemon:'),
+]
 
 let initialFinished = false
 let cleanupRunning = false
@@ -207,12 +210,8 @@ const logContainers = async (names) => {
       log: false,
       follow: true,
       callback: (chunk, source) => {
-        // check for exit buffer
-        if (chunk.includes(exitedBuffer)) {
-          return cleanup(
-            Number.parseInt(chunk.toString().split('exited with code ')[1]),
-          )
-        }
+        // check for exit buffer(s)
+        if (exitedBuffers.some((b) => chunk.includes(b))) return cleanup(1)
 
         // forward stderr
         if (source === 'stderr') return process.stderr.write(chunk)
