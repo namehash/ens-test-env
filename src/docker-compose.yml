@@ -28,7 +28,7 @@ services:
 
   ensrainbow:
     container_name: ensrainbow
-    image: ghcr.io/namehash/ensnode/ensrainbow-test:latest
+    image: ghcr.io/namehash/ensnode/ensrainbow:latest
     pull_policy: always
     environment:
       LOG_LEVEL: error
