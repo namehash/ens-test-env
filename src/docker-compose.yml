@@ -19,10 +19,12 @@ services:
       - anvil
       - ensrainbow
     environment:
-      DATABASE_SCHEMA: ens-test-env
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/ens-test-env
+      PORT: 42069
+      ENSNODE_PUBLIC_URL: http://localhost:42069
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
       ENSRAINBOW_URL: http://ensrainbow:3223
       RPC_URL_1337: http://anvil:8545
+      DATABASE_SCHEMA: ens-test-env
       ENS_DEPLOYMENT_CHAIN: ens-test-env
       ACTIVE_PLUGINS: eth
 
@@ -35,11 +37,11 @@ services:
 
   postgres:
     container_name: postgres
-    image: docker.io/library/postgres:17
+    restart: always
+    image: docker.io/library/postgres:16
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: ens-test-env
     tmpfs:
       - /var/lib/postgresql/data
 

@@ -254,15 +254,15 @@ const waitForENSNode = async (blockheight) => {
     })
       .then((res) => res.json())
       .then((res) => {
-        if (res.errors) {
-          console.error(res.errors)
-          return 0
-        }
+        if (res.errors) throw new Error(JSON.stringify(res.errors))
         const blockNumber = res.data._meta.status['1337'].block?.number
-        if (!blockNumber) throw new Error('not ready')
+        if (!blockNumber) return 0
         return blockNumber
       })
-      .catch(() => 0)
+      .catch((error) => {
+        console.error(error)
+        return 0
+      })
 
   // wait for indexer to reach blockNumber
   while (currentBlockheight < blockheight) {
