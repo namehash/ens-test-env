@@ -8,9 +8,9 @@ services:
     environment:
       ANVIL_IP_ADDR: '0.0.0.0'
 
-  ensnode:
-    container_name: ensnode
-    image: ghcr.io/namehash/ensnode/ensindexer:stable
+  ensindexer:
+    container_name: ensindexer
+    image: ghcr.io/namehash/ensnode/ensindexer:0.18.0-1.next
     pull_policy: always
     ports:
       - '42069:42069'
@@ -26,7 +26,7 @@ services:
       RPC_URL_1337: http://anvil:8545
       DATABASE_SCHEMA: ens-test-env
       ENS_DEPLOYMENT_CHAIN: ens-test-env
-      ACTIVE_PLUGINS: eth
+      ACTIVE_PLUGINS: root
 
   ensrainbow:
     container_name: ensrainbow
@@ -50,11 +50,11 @@ services:
     image: ghcr.io/ensdomains/ens-metadata-service:latest
     depends_on:
       - anvil
-      - ensnode
+      - ensindexer
     ports:
       - '8080:8080'
     environment:
       - ADDRESS_ETH_REGISTRAR=$ADDRESS_ETH_REGISTRAR
       - ADDRESS_NAME_WRAPPER=$ADDRESS_NAME_WRAPPER
       - RPC_PROVIDER=http://anvil:8545
-      - SUBGRAPH_URL=http://ensnode:42069/subgraph
+      - SUBGRAPH_URL=http://ensindexer:42069/subgraph

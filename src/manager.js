@@ -393,8 +393,8 @@ export const main = async (_config, _options, justKill) => {
   if (options.ensnode) {
     // start ensnode container
     console.log('Starting ENSNode...')
-    await compose.upOne('ensnode', opts)
-    logContainers(['ensnode', 'ensrainbow', 'postgres'])
+    await compose.upOne('ensindexer', opts)
+    logContainers(['ensindexer', 'ensrainbow', 'postgres'])
     console.log('↳ done.')
 
     // wait for it to index to present
