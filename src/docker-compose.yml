@@ -10,7 +10,7 @@ services:
 
   ensindexer:
     container_name: ensindexer
-    image: ghcr.io/namehash/ensnode/ensindexer:0.18.0-1.next
+    image: ghcr.io/namehash/ensnode/ensindexer:0.19.1
     pull_policy: always
     ports:
       - '42069:42069'
@@ -20,13 +20,14 @@ services:
       - ensrainbow
     environment:
       PORT: 42069
-      ENSNODE_PUBLIC_URL: http://localhost:42069
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
-      ENSRAINBOW_URL: http://ensrainbow:3223
       RPC_URL_1337: http://anvil:8545
-      DATABASE_SCHEMA: ens-test-env
+      ENSNODE_PUBLIC_URL: http://localhost:42069
+      ENSRAINBOW_URL: http://ensrainbow:3223
+      PONDER_LOG_LEVEL: debug
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
+      DATABASE_SCHEMA: public
       ENS_DEPLOYMENT_CHAIN: ens-test-env
-      ACTIVE_PLUGINS: root
+      ACTIVE_PLUGINS: subgraph
 
   ensrainbow:
     container_name: ensrainbow
@@ -38,7 +39,7 @@ services:
   postgres:
     container_name: postgres
     restart: always
-    image: docker.io/library/postgres:16
+    image: postgres:17
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
