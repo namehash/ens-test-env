@@ -23,7 +23,6 @@ services:
       RPC_URL_1337: http://anvil:8545
       ENSNODE_PUBLIC_URL: http://localhost:42069
       ENSRAINBOW_URL: http://ensrainbow:3223
-      PONDER_LOG_LEVEL: debug
       DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
       DATABASE_SCHEMA: public
       ENS_DEPLOYMENT_CHAIN: ens-test-env
