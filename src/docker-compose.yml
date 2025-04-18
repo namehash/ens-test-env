@@ -10,7 +10,7 @@ services:
 
   ensindexer:
     container_name: ensindexer
-    image: ghcr.io/namehash/ensnode/ensindexer:0.19.1
+    image: ghcr.io/namehash/ensnode/ensindexer:0.22.0
     pull_policy: always
     ports:
       - '42069:42069'
@@ -24,7 +24,7 @@ services:
       ENSNODE_PUBLIC_URL: http://localhost:42069
       ENSRAINBOW_URL: http://ensrainbow:3223
       DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
-      DATABASE_SCHEMA: public
+      DATABASE_SCHEMA: ens-test-env
       ENS_DEPLOYMENT_CHAIN: ens-test-env
       ACTIVE_PLUGINS: subgraph
 
