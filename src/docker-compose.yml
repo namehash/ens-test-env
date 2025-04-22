@@ -10,7 +10,7 @@ services:
 
   ensindexer:
     container_name: ensindexer
-    image: ghcr.io/namehash/ensnode/ensindexer:0.22.0
+    image: ghcr.io/namehash/ensnode/ensindexer:0.22.1-next.3
     pull_policy: always
     ports:
       - '42069:42069'
@@ -27,6 +27,8 @@ services:
       DATABASE_SCHEMA: ens-test-env
       ENS_DEPLOYMENT_CHAIN: ens-test-env
       ACTIVE_PLUGINS: subgraph
+      NEXT_PUBLIC_DEPLOYMENT_ADDRESSES: ${NEXT_PUBLIC_DEPLOYMENT_ADDRESSES:-}
+      DEPLOYMENT_ADDRESSES: ${DEPLOYMENT_ADDRESSES:-}
 
   ensrainbow:
     container_name: ensrainbow
