@@ -1,12 +1,13 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { config } from 'dotenv'
-import yaml from 'js-yaml'
+import { dump, load } from 'js-yaml'
 
 export const main = (options) => {
   const directory = path.resolve(process.cwd(), options.directory)
   const fileName = path.resolve(directory, 'subgraph.yaml')
-  const file = yaml.load(fs.readFileSync(fileName, 'utf8'))
+
+  const file = load(fs.readFileSync(fileName, 'utf8'))
 
   config({ path: path.resolve(process.cwd(), options.env) })
 
@@ -36,5 +37,5 @@ export const main = (options) => {
     }
   }
 
-  fs.writeFileSync(fileName, yaml.dump(file))
+  fs.writeFileSync(fileName, dump(file))
 }

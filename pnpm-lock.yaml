@@ -18,8 +18,8 @@ importers:
         specifier: ^9.1.2
         version: 9.1.2
       docker-compose:
-        specifier: ^1.1.0
-        version: 1.1.0
+        specifier: ^1.2.0
+        version: 1.2.0
       dotenv:
         specifier: ^16.4.7
         version: 16.4.7
@@ -254,8 +254,8 @@ packages:
     resolution: {integrity: sha512-58lmxKSA4BNyLz+HHMUzlOEpg09FV+ev6ZMe3vJihgdxzgcwZ8VoEEPmALCZG9LmqfVoNMMKpttIYTVG6uDY7A==}
     engines: {node: '>=0.3.1'}
 
-  docker-compose@1.1.0:
-    resolution: {integrity: sha512-VrkQJNafPQ5d6bGULW0P6KqcxSkv3ZU5Wn2wQA19oB71o7+55vQ9ogFe2MMeNbK+jc9rrKVy280DnHO5JLMWOQ==}
+  docker-compose@1.2.0:
+    resolution: {integrity: sha512-wIU1eHk3Op7dFgELRdmOYlPYS4gP8HhH1ZmZa13QZF59y0fblzFDFmKPhyc05phCy2hze9OEvNZAsoljrs+72w==}
     engines: {node: '>= 6.0.0'}
 
   dotenv@16.4.7:
@@ -620,7 +620,7 @@ snapshots:
 
   diff@4.0.2: {}
 
-  docker-compose@1.1.0:
+  docker-compose@1.2.0:
     dependencies:
       yaml: 2.7.0
 
