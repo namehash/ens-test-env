@@ -48,7 +48,7 @@ const getCompose = async () => {
 
 /**
  * @type {import('concurrently').Command[]}
- * */
+ */
 let commands
 let options
 /**
@@ -57,7 +57,6 @@ let options
 let config
 
 /**
- *
  * @param {object[]} items
  * @returns
  */
@@ -73,7 +72,6 @@ const batchRpcFetch = (items) =>
   }).then((res) => res.json())
 
 /**
- *
  * @param {string} method
  * @param {*} params
  * @returns
@@ -118,7 +116,7 @@ async function cleanup(exitCode) {
         compose.rm({
           ...opts,
           log: false,
-        }),
+        })
       )
       .catch(() => {})
   }
@@ -132,7 +130,6 @@ async function cleanup(exitCode) {
   process.exit(exitCode ? 1 : 0)
 }
 /**
- *
  * @param {string | Buffer} prefix
  * @returns
  */
@@ -141,8 +138,8 @@ const makePrepender = (prefix) =>
     transform(chunk, _, done) {
       // @ts-expect-error
       this._rest = this._rest?.length
-        ? // @ts-expect-error
-          Buffer.concat([this._rest, chunk])
+        // @ts-expect-error
+        ? Buffer.concat([this._rest, chunk])
         : chunk
 
       let index
@@ -170,14 +167,14 @@ const makePrepender = (prefix) =>
       // If we have any remaining data in the cache, send it out
 
       // @ts-expect-error
-      if (this._rest?.length)
+      if (this._rest?.length) {
         // @ts-expect-error
         return void done(null, Buffer.concat([prefix, this._rest]))
+      }
     },
   })
 
 /**
- *
  * @param {string} name
  * @param {*} command
  * @returns
@@ -190,8 +187,12 @@ const awaitCommand = async (name, command) => {
     stdio: 'pipe',
     shell: true,
   })
-  const outPrepender = makePrepender(Buffer.from(`\x1b[1;34m[${name}]\x1b[0m `))
-  const errPrepender = makePrepender(Buffer.from(`\x1b[1;34m[${name}]\x1b[0m `))
+  const outPrepender = makePrepender(
+    Buffer.from(`\x1b[1;34m[${name}]\x1b[0m `),
+  )
+  const errPrepender = makePrepender(
+    Buffer.from(`\x1b[1;34m[${name}]\x1b[0m `),
+  )
   if (verbosity > 0) {
     deploy.stdout.pipe(outPrepender).pipe(process.stdout)
   }
@@ -221,7 +222,7 @@ const logContainers = async (names) => {
 
         // ignore any output that matches 'ignoreOutput' buffers
         const ignoreOutput = outputsToIgnore.some((ignoreBuffer) =>
-          chunk.includes(ignoreBuffer),
+          chunk.includes(ignoreBuffer)
         )
         if (ignoreOutput) return
 
@@ -236,7 +237,6 @@ const logContainers = async (names) => {
 }
 
 /**
- *
  * @param {number} blockheight
  */
 const waitForENSNode = async (blockheight) => {
@@ -279,7 +279,6 @@ const waitForENSNode = async (blockheight) => {
 }
 
 /**
- *
  * @param {import('./config').ENSTestEnvConfig} _config
  * @param {*} _options
  * @param {boolean} [justKill]
@@ -331,9 +330,13 @@ export const main = async (_config, _options, justKill) => {
 
   // set block timestamp
   if (options.extraTime) {
-    const timestamp =
-      Math.floor(Date.now() / 1000) - Number.parseInt(options.extraTime)
-    console.log('\x1b[1;34m[config]\x1b[0m ', 'setting timestamp to', timestamp)
+    const timestamp = Math.floor(Date.now() / 1000) -
+      Number.parseInt(options.extraTime)
+    console.log(
+      '\x1b[1;34m[config]\x1b[0m ',
+      'setting timestamp to',
+      timestamp,
+    )
     // set next block timestamp relative to current time
     await rpcFetch('anvil_setNextBlockTimestamp', [timestamp])
   } else {
@@ -364,6 +367,7 @@ export const main = async (_config, _options, justKill) => {
   // TODO: can we run this logic every time?
   // set to current time
   if (options.extraTime) {
+    await rpcFetch('evm_snapshot', [])
     // set to current time
     await rpcFetch('anvil_setNextBlockTimestamp', [
       Math.floor(Date.now() / 1000),
@@ -411,7 +415,7 @@ export const main = async (_config, _options, justKill) => {
 
     /**
      * @type {import('concurrently').ConcurrentlyResult['result']}
-     **/
+     */
     let result
     ;({ commands, result } = concurrently(cmdsToRun, {
       prefix: 'name',
