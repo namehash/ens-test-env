@@ -4,16 +4,16 @@ services:
     image: ghcr.io/foundry-rs/foundry:stable
     entrypoint: anvil --chain-id 1337 --gas-limit 50000000 --timestamp 1640995200 $ANVIL_EXTRA_ARGS
     ports:
-      - '8545:8545'
+      - "8545:8545"
     environment:
-      ANVIL_IP_ADDR: '0.0.0.0'
+      ANVIL_IP_ADDR: "0.0.0.0"
 
   ensindexer:
     container_name: ensindexer
-    image: ghcr.io/namehash/ensnode/ensindexer:sha-cb683f5
+    image: ghcr.io/namehash/ensnode/ensindexer:0.26.0
     pull_policy: always
     ports:
-      - '42069:42069'
+      - "42069:42069"
     depends_on:
       - postgres
       - anvil
@@ -54,7 +54,7 @@ services:
       - anvil
       - ensindexer
     ports:
-      - '8080:8080'
+      - "8080:8080"
     environment:
       - ADDRESS_ETH_REGISTRAR=$ADDRESS_ETH_REGISTRAR
       - ADDRESS_NAME_WRAPPER=$ADDRESS_NAME_WRAPPER
