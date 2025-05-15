@@ -394,8 +394,8 @@ export const main = async (_config, _options, justKill) => {
   if (cleanupRunning) return
 
   if (options.ensnode) {
-    // start ensnode container
     console.log('Starting ENSNode...')
+    // start ENSNode containers (dependencies also starts ensrainbow and postgres)
     await compose.upOne('ensindexer', opts)
     logContainers(['ensindexer', 'ensrainbow', 'postgres'])
     console.log('↳ done.')
