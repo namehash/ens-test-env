@@ -364,9 +364,6 @@ export const main = async (_config, _options, justKill) => {
   // TODO: can we run this logic every time?
   // set to current time
   if (options.extraTime) {
-    // snapshot (required for ens-app-v3 tests)
-    await rpcFetch('evm_snapshot', [])
-
     // set to current time
     await rpcFetch('anvil_setNextBlockTimestamp', [
       Math.floor(Date.now() / 1000),
