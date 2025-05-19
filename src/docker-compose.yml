@@ -10,7 +10,7 @@ services:
 
   ensindexer:
     container_name: ensindexer
-    image: ghcr.io/namehash/ensnode/ensindexer:0.26.0
+    image: ghcr.io/namehash/ensnode/ensindexer:latest
     pull_policy: always
     ports:
       - '42069:42069'
