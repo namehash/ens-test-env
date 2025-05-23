@@ -1,9 +1,10 @@
 {
   "name": "@ensdomains/ens-test-env",
   "type": "module",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "files": [
-    "src"
+    "src",
+    "ens-test-env.config.js"
   ],
   "types": "src/index.d.ts",
   "engines": {
@@ -13,7 +14,7 @@
     "cli-progress": "^3.10.0",
     "commander": "^13.1.0",
     "concurrently": "^9.1.2",
-    "docker-compose": "^1.1.0",
+    "docker-compose": "^1.2.0",
     "dotenv": "^16.4.7",
     "dunai": "0.0.0-dev.2",
     "js-yaml": "^4.1.0",
