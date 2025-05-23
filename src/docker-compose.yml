@@ -1,62 +1,62 @@
 services:
   anvil:
+    container_name: anvil
     image: ghcr.io/foundry-rs/foundry:stable
-    ports:
-      - '8545:8545'
     entrypoint: anvil --chain-id 1337 --gas-limit 50000000 --timestamp 1640995200 $ANVIL_EXTRA_ARGS
-    environment:
-      ANVIL_IP_ADDR: '0.0.0.0'
-  graph-node:
-    image: graphprotocol/graph-node:v0.30.0
     ports:
-      - '8000:8000'
-      - '8001:8001'
-      - '8020:8020'
-      - '8030:8030'
-      - '8040:8040'
+      - "8545:8545"
+    environment:
+      ANVIL_IP_ADDR: "0.0.0.0"
+
+  ensindexer:
+    container_name: ensindexer
+    image: ghcr.io/namehash/ensnode/ensindexer:0.26.0
+    pull_policy: always
+    ports:
+      - "42069:42069"
     depends_on:
-      - ipfs
       - postgres
       - anvil
+      - ensrainbow
     environment:
-      postgres_host: postgres
-      postgres_user: graph-node
-      postgres_pass: let-me-in
-      postgres_db: graph-node
-      ipfs: 'ipfs:5001'
-      ethereum: 'mainnet:http://anvil:8545'
-      GRAPH_LOG: $GRAPH_LOG_LEVEL
-      GRAPH_ALLOW_NON_DETERMINISTIC_IPFS: 'true'
-      GRAPH_ETHEREUM_CLEANUP_BLOCKS: 'true'
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
-  ipfs:
-    image: ipfs/kubo:v0.16.0
-    ports:
-      - '5001:5001'
-    volumes:
-      - $DATA_FOLDER/ipfs:/data/ipfs
+      PORT: 42069
+      RPC_URL_1337: http://anvil:8545
+      ENSNODE_PUBLIC_URL: http://localhost:42069
+      ENSRAINBOW_URL: http://ensrainbow:3223
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
+      DATABASE_SCHEMA: ens-test-env
+      ENS_DEPLOYMENT_CHAIN: ens-test-env
+      ACTIVE_PLUGINS: subgraph
+      NEXT_PUBLIC_DEPLOYMENT_ADDRESSES: ${NEXT_PUBLIC_DEPLOYMENT_ADDRESSES:-}
+      DEPLOYMENT_ADDRESSES: ${DEPLOYMENT_ADDRESSES:-}
+
+  ensrainbow:
+    container_name: ensrainbow
+    image: ghcr.io/namehash/ensnode/ensrainbow-test:latest
+    pull_policy: always
+    environment:
+      LOG_LEVEL: error
+
   postgres:
-    image: postgres:14-alpine
-    ports:
-      - '5432:5432'
-    command: [ 'postgres', '-cshared_preload_libraries=pg_stat_statements' ]
+    container_name: postgres
+    restart: always
+    image: postgres:17
     environment:
-      POSTGRES_USER: graph-node
-      POSTGRES_PASSWORD: let-me-in
-      POSTGRES_DB: graph-node
-      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
-    volumes:
-      - $DATA_FOLDER/postgres:/var/lib/postgresql/data
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    tmpfs:
+      - /var/lib/postgresql/data
+
   metadata:
+    container_name: metadata
     image: ghcr.io/ensdomains/ens-metadata-service:latest
     depends_on:
       - anvil
-      - graph-node
+      - ensindexer
     ports:
-      - '8080:8080'
+      - "8080:8080"
     environment:
       - ADDRESS_ETH_REGISTRAR=$ADDRESS_ETH_REGISTRAR
       - ADDRESS_NAME_WRAPPER=$ADDRESS_NAME_WRAPPER
       - RPC_PROVIDER=http://anvil:8545
-      - SUBGRAPH_URL=http://graph-node:8000/subgraphs/name/graphprotocol/ens
+      - SUBGRAPH_URL=http://ensindexer:42069/subgraph

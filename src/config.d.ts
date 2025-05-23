@@ -7,13 +7,10 @@ import type { ConcurrentlyCommandInput } from 'concurrently'
 export interface ENSTestEnvConfig {
   deployCommand?: string
   buildCommand?: string
-  labelHashes?: { hash: string; label: string }[]
   scripts?: (Exclude<ConcurrentlyCommandInput, string> & {
     finishOnExit?: boolean
   })[]
   paths?: {
-    data?: string
-    archive?: string
     composeFile?: string
   }
 }

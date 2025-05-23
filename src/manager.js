@@ -4,15 +4,29 @@ import { Transform } from 'node:stream'
 import concurrently from 'concurrently'
 import compose from 'docker-compose'
 import waitOn from 'wait-on'
-import { main as fetchData } from './fetch-data.js'
 
+// ignore outputs from docker-compose if they contain any of these buffers, helpful for ignoring
+// verbose logs (esp. from anvil during deploy script)
 let outputsToIgnore = [
   Buffer.from('eth_getBlockByNumber'),
   Buffer.from('eth_getBlockByHash'),
   Buffer.from('eth_getTransactionReceipt'),
+  Buffer.from('eth_blockNumber'),
+  Buffer.from('eth_chainId'),
+  Buffer.from('eth_getLogs'),
+  Buffer.from('evm_snapshot'),
+  Buffer.from('evm_revert'),
+  Buffer.from('eth_call'),
+  Buffer.from('eth_estimateGas'),
+  Buffer.from('eth_feeHistory'),
+  Buffer.from('eth_sendTransaction'),
 ]
 
-const exitedBuffer = Buffer.from('exited with code 1')
+// detects container exits in docker-compose logs
+const exitedBuffers = [
+  Buffer.from('exited with code 1'),
+  Buffer.from('Error response from daemon:'),
+]
 
 let initialFinished = false
 let cleanupRunning = false
@@ -34,16 +48,15 @@ const getCompose = async () => {
 
 /**
  * @type {import('concurrently').Command[]}
- * */
+ */
 let commands
 let options
 /**
- * @type {import('./config').ENSTestEnvConfig}
+ * @type {import('./config.js').ENSTestEnvConfig}
  */
 let config
 
 /**
- *
  * @param {object[]} items
  * @returns
  */
@@ -59,7 +72,6 @@ const batchRpcFetch = (items) =>
   }).then((res) => res.json())
 
 /**
- *
  * @param {string} method
  * @param {*} params
  * @returns
@@ -67,7 +79,7 @@ const batchRpcFetch = (items) =>
 const rpcFetch = (method, params) =>
   batchRpcFetch([{ method, params }]).then((res) => res[0])
 
-async function cleanup(_, exitCode) {
+async function cleanup(exitCode) {
   const compose = await getCompose()
   let force = false
   if (cleanupRunning) {
@@ -106,22 +118,18 @@ async function cleanup(_, exitCode) {
           log: false,
         }),
       )
-      .catch(() => {})
-    if (options.save) {
-      await fetchData('compress', config)
-    }
+      .catch(() => { })
   }
 
   commands?.forEach((command) => {
     try {
       process.kill(command.pid, 'SIGKILL')
-    } catch {}
+    } catch { }
   })
 
   process.exit(exitCode ? 1 : 0)
 }
 /**
- *
  * @param {string | Buffer} prefix
  * @returns
  */
@@ -131,7 +139,7 @@ const makePrepender = (prefix) =>
       // @ts-expect-error
       this._rest = this._rest?.length
         ? // @ts-expect-error
-          Buffer.concat([this._rest, chunk])
+        Buffer.concat([this._rest, chunk])
         : chunk
 
       let index
@@ -159,14 +167,14 @@ const makePrepender = (prefix) =>
       // If we have any remaining data in the cache, send it out
 
       // @ts-expect-error
-      if (this._rest?.length)
+      if (this._rest?.length) {
         // @ts-expect-error
         return void done(null, Buffer.concat([prefix, this._rest]))
+      }
     },
   })
 
 /**
- *
  * @param {string} name
  * @param {*} command
  * @returns
@@ -187,9 +195,87 @@ const awaitCommand = async (name, command) => {
   deploy.stderr.pipe(errPrepender).pipe(process.stderr)
   return new Promise((resolve) => deploy.on('exit', () => resolve()))
 }
+
 /**
- *
- * @param {import('./config').ENSTestEnvConfig} _config
+ * logs containers by name, starting cleanup if they exit
+ * @param {string[]} names
+ */
+const logContainers = async (names) => {
+  compose
+    .logs(names, {
+      ...opts,
+      log: false,
+      follow: true,
+      callback: (chunk, source) => {
+        // check for exit buffer(s)
+        if (exitedBuffers.some((b) => chunk.includes(b))) return cleanup(1)
+
+        // forward stderr
+        if (source === 'stderr') return process.stderr.write(chunk)
+
+        // ignore log if verbosity 0
+        if (verbosity === 0) return
+
+        // ignore any output that matches 'ignoreOutput' buffers
+        const ignoreOutput = outputsToIgnore.some((ignoreBuffer) =>
+          chunk.includes(ignoreBuffer),
+        )
+        if (ignoreOutput) return
+
+        // forward stdout
+        return process.stdout.write(chunk)
+      },
+    })
+    .catch((e) => {
+      console.error(e)
+      cleanup(1)
+    })
+}
+
+/**
+ * @param {number} blockheight
+ */
+const waitForENSNode = async (blockheight) => {
+  // wait for server to be available
+  await waitOn({ resources: ['http://localhost:42069'] })
+
+  let currentBlockheight = 0
+  // getter for current indexed blockheight
+  const getCurrentBlock = async () =>
+    // TODO: once _meta is available on subgraph-compat schema (/subgraph), use that
+    fetch('http://localhost:42069/ponder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: '{ _meta { status } }', variables: {} }),
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        if (res.errors) throw new Error(JSON.stringify(res.errors))
+        const blockNumber = res.data._meta.status['1337'].block?.number
+        if (!blockNumber) return 0
+        return blockNumber
+      })
+      .catch((error) => {
+        console.error(error)
+        return 0
+      })
+
+  // wait for indexer to reach blockNumber
+  while (currentBlockheight < blockheight) {
+    currentBlockheight = await getCurrentBlock()
+    if (verbosity >= 1) {
+      console.log(
+        `ENSNode at blockheight: ${currentBlockheight}, need ${blockheight}`,
+      )
+    }
+
+    // sleep
+    await new Promise((resolve) => setTimeout(resolve, 500))
+  }
+}
+
+/**
+ * @param {import('./config.js').ENSTestEnvConfig} _config
  * @param {*} _options
  * @param {boolean} [justKill]
  * @returns
@@ -200,57 +286,25 @@ export const main = async (_config, _options, justKill) => {
   verbosity = Number.parseInt(options.verbosity)
 
   opts.cwd = config.paths.composeFile.split('/docker-compose.yml')[0]
+  opts.env = { ...process.env }
 
-  opts.env = {
-    ...process.env,
-    DATA_FOLDER: config.paths.data,
-    GRAPH_LOG_LEVEL: 'info',
-    ANVIL_EXTRA_ARGS: '',
-    BLOCK_TIMESTAMP: Math.floor(new Date().getTime() / 1000).toString(),
-  }
-
-  if (justKill) {
-    return cleanup(undefined, 'SIGINT')
-  }
-
-  if (options.verbosity >= 2) {
+  // if verbosity is high enough
+  if (verbosity >= 2) {
+    // unset outputsToIgnore (log everything)
     outputsToIgnore = []
-    opts.env.GRAPH_LOG_LEVEL = 'trace'
+    // enforce anvil tracing logs
     opts.env.ANVIL_EXTRA_ARGS = '--tracing'
+  } else {
+    // silence 'variable is not set' warning
+    opts.env.ANVIL_EXTRA_ARGS = ''
   }
+
+  if (justKill) return cleanup('SIGINT')
+
+  // log the config we're using
+  if (verbosity >= 1) console.log({ config, options })
 
   const compose = await getCompose()
-
-  try {
-    await compose.upOne('anvil', opts)
-  } catch (e) {
-    console.error('e: ', e)
-  }
-
-  compose
-    .logs(['anvil', 'graph-node', 'postgres', 'ipfs', 'metadata'], {
-      ...opts,
-      log: false,
-      follow: verbosity > 0,
-      callback: (chunk, source) => {
-        if (source === 'stderr') {
-          process.stderr.write(chunk)
-        } else {
-          for (let i = 0; i < outputsToIgnore.length; i++) {
-            if (chunk.includes(outputsToIgnore[i])) return
-          }
-          if (chunk.includes(exitedBuffer)) {
-            cleanup(
-              undefined,
-              Number.parseInt(chunk.toString().split('exited with code ')[1]),
-            )
-            return
-          }
-          process.stdout.write(chunk)
-        }
-      },
-    })
-    .catch(() => {})
 
   const inxsToFinishOnExit = []
   const cmdsToRun = (config.scripts || []).map(
@@ -260,180 +314,111 @@ export const main = async (_config, _options, justKill) => {
     },
   )
 
+  // start anvil & wait for rpc
+  console.log('Starting anvil...')
+  await compose.upOne('anvil', opts)
+  logContainers(['anvil'])
+  await waitOn({ resources: ['tcp:localhost:8545'] })
+  console.log('↳ done.')
+
+  // bail if cleaning up
   if (cleanupRunning) return
 
-  await waitOn({ resources: ['tcp:localhost:8545'] })
+  // set block timestamp
+  if (options.extraTime) {
+    const timestamp =
+      Math.floor(Date.now() / 1000) - Number.parseInt(options.extraTime)
+    console.log('\x1b[1;34m[config]\x1b[0m ', 'setting timestamp to', timestamp)
+    // set next block timestamp relative to current time
+    await rpcFetch('anvil_setNextBlockTimestamp', [timestamp])
+  } else {
+    // set next block timestamp to ensure consistent hashes
+    await rpcFetch('anvil_setNextBlockTimestamp', [1640995200])
+  }
 
-  // wait 1000 ms to make sure the server is up
-  await new Promise((resolve) => setTimeout(resolve, 1000))
+  // set block timestamp interval before deploy (necessary for deploy to succeed)
+  await rpcFetch('anvil_setBlockTimestampInterval', [1])
 
-  if (!options.save) {
-    if (!options.extraTime) {
-      // set next block timestamp to ensure consistent hashes
-      await rpcFetch('anvil_setNextBlockTimestamp', [1640995200])
-    } else {
-      const timestamp =
-        Math.floor(Date.now() / 1000) - Number.parseInt(options.extraTime)
-      console.log(
-        '\x1b[1;34m[config]\x1b[0m ',
-        'setting timestamp to',
-        timestamp,
-      )
-      // set next block timestamp relative to current time
-      await rpcFetch('anvil_setNextBlockTimestamp', [timestamp])
-    }
-    await rpcFetch('anvil_setBlockTimestampInterval', [1])
+  // wait for deploy
+  console.log('Running deploy script...')
+  await awaitCommand('deploy', config.deployCommand)
+  console.log('↳ done.')
 
-    await awaitCommand('deploy', config.deployCommand)
+  // remove block timestamp interval after deploy (necessary for some tests to pass)
+  await rpcFetch('anvil_removeBlockTimestampInterval', [])
 
-    // remove block timestamp interval after deploy
-    await rpcFetch('anvil_removeBlockTimestampInterval', [])
+  // if exiting after deploy, cleanup here
+  if (options.exitAfterDeploy) {
+    console.log(
+      '\x1b[1;34m[config]\x1b[0m ',
+      'Exiting after contract deployment...',
+    )
+    return cleanup(0)
+  }
 
-    if (options.exitAfterDeploy) {
-      console.log(
-        '\x1b[1;34m[config]\x1b[0m ',
-        'Exiting after contract deployment...',
-      )
-      return cleanup(undefined, 0)
-    }
+  // TODO: can we run this logic every time?
+  // set to current time
+  if (options.extraTime) {
+    await rpcFetch('evm_snapshot', [])
+    // set to current time
+    await rpcFetch('anvil_setNextBlockTimestamp', [
+      Math.floor(Date.now() / 1000),
+    ])
 
-    if (options.extraTime) {
-      // snapshot before setting current time
-      await rpcFetch('evm_snapshot', [])
-      // set to current time
-      await rpcFetch('anvil_setNextBlockTimestamp', [
-        Math.floor(Date.now() / 1000),
-      ])
-      // mine block for graph node to update
-      await rpcFetch('evm_mine', [])
-      // snapshot after setting current time
-      await rpcFetch('evm_snapshot', [])
-    }
+    // manually mine block
+    // NOTE: this was originally required for graph-node to register an update but in this fork
+    // we use ENSNode, which doesn't have this requirement. that said, this line must remain,
+    // because otherwise tests fail (not sure why)
+    await rpcFetch('evm_mine', [])
+  }
 
-    if (config.buildCommand && options.build) {
-      await awaitCommand('build', config.buildCommand)
-    }
+  // snapshot (necesssary so tests can easily reset to this point)
+  await rpcFetch('evm_snapshot', [])
+
+  // if there's a build command, run it
+  if (config.buildCommand && options.build) {
+    console.log('Running build command...')
+    await awaitCommand('build', config.buildCommand)
+    console.log('↳ done.')
   }
 
   initialFinished = true
 
   if (cleanupRunning) return
 
-  if (options.graph) {
-    try {
-      await compose.upAll(opts)
-    } catch {}
+  if (options.ensnode) {
+    // start ensnode container
+    console.log('Starting ENSNode...')
+    await compose.upOne('ensindexer', opts)
+    logContainers(['ensindexer', 'ensrainbow', 'postgres'])
+    console.log('↳ done.')
 
-    await waitOn({ resources: ['http://localhost:8040'] })
-
-    if (options.save) {
-      const internalHashes = [
-        {
-          hash: '0x9dd2c369a187b4e6b9c402f030e50743e619301ea62aa4c0737d4ef7e10a3d49',
-          label: 'xyz',
-        },
-        {
-          hash: '0x4f5b812789fc606be1b3b16908db13fc7a9adf7ca72641f84d75b47069d3d7f0',
-          label: 'eth',
-        },
-        {
-          hash: '0x9c22ff5f21f0b81b113e63f7db6da94fedef11b2119b4088b89664fb9a3cb658',
-          label: 'test',
-        },
-        {
-          hash: '0xb7ccb6878fbded310d2d05350bca9c84568ecb568d4b626c83e0508c3193ce89',
-          label: 'legacy',
-        },
-        {
-          hash: '0xe5e14487b78f85faa6e1808e89246cf57dd34831548ff2e6097380d98db2504a',
-          label: 'addr',
-        },
-        {
-          hash: '0xdec08c9dbbdd0890e300eb5062089b2d4b1c40e3673bbccb5423f7b37dcf9a9c',
-          label: 'reverse',
-        },
-      ]
-
-      const allHashes = [...internalHashes, ...(config.labelHashes || [])]
-
-      await compose.exec(
-        'postgres',
-        [
-          'psql',
-          '-U',
-          'graph-node',
-          'graph-node',
-          '-c',
-          `INSERT INTO public.ens_names (hash, name) VALUES ${allHashes
-            .map(({ hash, label }) => `('${hash}', '${label}')`)
-            .join(', ')};`,
-        ],
-        {
-          ...opts,
-        },
-      )
-    } else {
-      await waitOn({
-        resources: [
-          'http-get://localhost:8000/subgraphs/name/graphprotocol/ens',
-        ],
-      })
-      await new Promise((resolve) => setTimeout(resolve, 100))
-    }
+    // wait for it to index to present
+    const { result } = await rpcFetch('eth_blockNumber', [])
+    const blockheight = Number.parseInt(result.slice(2), 16)
+    console.log(`Waiting for ENSNode to index to block ${blockheight}...`)
+    await waitForENSNode(blockheight)
+    console.log('↳ done.')
   }
 
-  if (!options.save && cmdsToRun.length > 0 && options.scripts) {
-    if (options.graph) {
-      const indexArray = []
-      const getCurrentIndex = async () =>
-        fetch('http://localhost:8000/subgraphs/name/graphprotocol/ens', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query: `
-            {
-              _meta {
-                block {
-                  number
-                }
-              }
-            }
-          `,
-            variables: {},
-          }),
-        })
-          .then((res) => res.json())
-          .then((res) => {
-            if (res.errors) return 0
-            return res.data._meta.block.number
-          })
-          .catch(() => 0)
-      do {
-        indexArray.push(await getCurrentIndex())
-        if (indexArray.length > 10) indexArray.shift()
-        await new Promise((resolve) => setTimeout(resolve, 100))
-      } while (
-        !indexArray.every((i) => i === indexArray[0]) ||
-        indexArray.length < 2 ||
-        indexArray[0] === 0
-      )
-    }
+  // run commands if specified
+  if (options.scripts && cmdsToRun.length > 0) {
+    console.log('Running scripts...')
+
     /**
      * @type {import('concurrently').ConcurrentlyResult['result']}
-     **/
+     */
     let result
-    ;({ commands, result } = concurrently(cmdsToRun, {
-      prefix: 'name',
-    }))
+      ; ({ commands, result } = concurrently(cmdsToRun, {
+        prefix: 'name',
+      }))
 
     commands.forEach((cmd) => {
       if (inxsToFinishOnExit.includes(cmd.index)) {
-        cmd.close.subscribe(({ exitCode }) => cleanup(undefined, exitCode))
+        cmd.close.subscribe(({ exitCode }) => cleanup(exitCode))
       } else {
         cmd.close.subscribe(
-          ({ exitCode }) => exitCode === 0 || cleanup(undefined, exitCode),
+          ({ exitCode }) => exitCode === 0 || cleanup(exitCode),
         )
       }
     })
@@ -442,8 +427,8 @@ export const main = async (_config, _options, justKill) => {
   }
 }
 
-//do something when app is closing
+// do something when app is closing
 process.on('exit', cleanup.bind(null, { cleanup: true }))
 
-//catches ctrl+c event
+// catches ctrl+c event
 process.on('SIGINT', cleanup.bind(null, { exit: true }))
