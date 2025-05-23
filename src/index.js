@@ -8,7 +8,7 @@ import { Command, Option } from 'commander'
 import { main as manager } from './manager.js'
 
 /**
- * @type {import('./config').ENSTestEnvConfig}
+ * @type {import('./config.js').ENSTestEnvConfig}
  */
 let config
 const program = new Command()

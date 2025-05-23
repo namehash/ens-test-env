@@ -52,7 +52,7 @@ const getCompose = async () => {
 let commands
 let options
 /**
- * @type {import('./config').ENSTestEnvConfig}
+ * @type {import('./config.js').ENSTestEnvConfig}
  */
 let config
 
@@ -116,15 +116,15 @@ async function cleanup(exitCode) {
         compose.rm({
           ...opts,
           log: false,
-        })
+        }),
       )
-      .catch(() => {})
+      .catch(() => { })
   }
 
   commands?.forEach((command) => {
     try {
       process.kill(command.pid, 'SIGKILL')
-    } catch {}
+    } catch { }
   })
 
   process.exit(exitCode ? 1 : 0)
@@ -138,8 +138,8 @@ const makePrepender = (prefix) =>
     transform(chunk, _, done) {
       // @ts-expect-error
       this._rest = this._rest?.length
-        // @ts-expect-error
-        ? Buffer.concat([this._rest, chunk])
+        ? // @ts-expect-error
+        Buffer.concat([this._rest, chunk])
         : chunk
 
       let index
@@ -187,12 +187,8 @@ const awaitCommand = async (name, command) => {
     stdio: 'pipe',
     shell: true,
   })
-  const outPrepender = makePrepender(
-    Buffer.from(`\x1b[1;34m[${name}]\x1b[0m `),
-  )
-  const errPrepender = makePrepender(
-    Buffer.from(`\x1b[1;34m[${name}]\x1b[0m `),
-  )
+  const outPrepender = makePrepender(Buffer.from(`\x1b[1;34m[${name}]\x1b[0m `))
+  const errPrepender = makePrepender(Buffer.from(`\x1b[1;34m[${name}]\x1b[0m `))
   if (verbosity > 0) {
     deploy.stdout.pipe(outPrepender).pipe(process.stdout)
   }
@@ -222,7 +218,7 @@ const logContainers = async (names) => {
 
         // ignore any output that matches 'ignoreOutput' buffers
         const ignoreOutput = outputsToIgnore.some((ignoreBuffer) =>
-          chunk.includes(ignoreBuffer)
+          chunk.includes(ignoreBuffer),
         )
         if (ignoreOutput) return
 
@@ -279,7 +275,7 @@ const waitForENSNode = async (blockheight) => {
 }
 
 /**
- * @param {import('./config').ENSTestEnvConfig} _config
+ * @param {import('./config.js').ENSTestEnvConfig} _config
  * @param {*} _options
  * @param {boolean} [justKill]
  * @returns
@@ -330,13 +326,9 @@ export const main = async (_config, _options, justKill) => {
 
   // set block timestamp
   if (options.extraTime) {
-    const timestamp = Math.floor(Date.now() / 1000) -
-      Number.parseInt(options.extraTime)
-    console.log(
-      '\x1b[1;34m[config]\x1b[0m ',
-      'setting timestamp to',
-      timestamp,
-    )
+    const timestamp =
+      Math.floor(Date.now() / 1000) - Number.parseInt(options.extraTime)
+    console.log('\x1b[1;34m[config]\x1b[0m ', 'setting timestamp to', timestamp)
     // set next block timestamp relative to current time
     await rpcFetch('anvil_setNextBlockTimestamp', [timestamp])
   } else {
@@ -417,9 +409,9 @@ export const main = async (_config, _options, justKill) => {
      * @type {import('concurrently').ConcurrentlyResult['result']}
      */
     let result
-    ;({ commands, result } = concurrently(cmdsToRun, {
-      prefix: 'name',
-    }))
+      ; ({ commands, result } = concurrently(cmdsToRun, {
+        prefix: 'name',
+      }))
 
     commands.forEach((cmd) => {
       if (inxsToFinishOnExit.includes(cmd.index)) {
