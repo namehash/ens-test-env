@@ -48,16 +48,15 @@ const getCompose = async () => {
 
 /**
  * @type {import('concurrently').Command[]}
- * */
+ */
 let commands
 let options
 /**
- * @type {import('./config').ENSTestEnvConfig}
+ * @type {import('./config.js').ENSTestEnvConfig}
  */
 let config
 
 /**
- *
  * @param {object[]} items
  * @returns
  */
@@ -73,7 +72,6 @@ const batchRpcFetch = (items) =>
   }).then((res) => res.json())
 
 /**
- *
  * @param {string} method
  * @param {*} params
  * @returns
@@ -120,19 +118,18 @@ async function cleanup(exitCode) {
           log: false,
         }),
       )
-      .catch(() => {})
+      .catch(() => { })
   }
 
   commands?.forEach((command) => {
     try {
       process.kill(command.pid, 'SIGKILL')
-    } catch {}
+    } catch { }
   })
 
   process.exit(exitCode ? 1 : 0)
 }
 /**
- *
  * @param {string | Buffer} prefix
  * @returns
  */
@@ -142,7 +139,7 @@ const makePrepender = (prefix) =>
       // @ts-expect-error
       this._rest = this._rest?.length
         ? // @ts-expect-error
-          Buffer.concat([this._rest, chunk])
+        Buffer.concat([this._rest, chunk])
         : chunk
 
       let index
@@ -170,14 +167,14 @@ const makePrepender = (prefix) =>
       // If we have any remaining data in the cache, send it out
 
       // @ts-expect-error
-      if (this._rest?.length)
+      if (this._rest?.length) {
         // @ts-expect-error
         return void done(null, Buffer.concat([prefix, this._rest]))
+      }
     },
   })
 
 /**
- *
  * @param {string} name
  * @param {*} command
  * @returns
@@ -236,7 +233,6 @@ const logContainers = async (names) => {
 }
 
 /**
- *
  * @param {number} blockheight
  */
 const waitForENSNode = async (blockheight) => {
@@ -279,8 +275,7 @@ const waitForENSNode = async (blockheight) => {
 }
 
 /**
- *
- * @param {import('./config').ENSTestEnvConfig} _config
+ * @param {import('./config.js').ENSTestEnvConfig} _config
  * @param {*} _options
  * @param {boolean} [justKill]
  * @returns
@@ -364,6 +359,7 @@ export const main = async (_config, _options, justKill) => {
   // TODO: can we run this logic every time?
   // set to current time
   if (options.extraTime) {
+    await rpcFetch('evm_snapshot', [])
     // set to current time
     await rpcFetch('anvil_setNextBlockTimestamp', [
       Math.floor(Date.now() / 1000),
@@ -411,11 +407,11 @@ export const main = async (_config, _options, justKill) => {
 
     /**
      * @type {import('concurrently').ConcurrentlyResult['result']}
-     **/
+     */
     let result
-    ;({ commands, result } = concurrently(cmdsToRun, {
-      prefix: 'name',
-    }))
+      ; ({ commands, result } = concurrently(cmdsToRun, {
+        prefix: 'name',
+      }))
 
     commands.forEach((cmd) => {
       if (inxsToFinishOnExit.includes(cmd.index)) {
