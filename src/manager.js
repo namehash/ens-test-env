@@ -40,13 +40,6 @@ const opts = {
 }
 let verbosity = 0
 
-const getCompose = async () => {
-  const version = await compose.version().catch(() => null)
-  if (version) return compose
-
-  throw new Error('No docker-compose found, or docker not running?')
-}
-
 /**
  * @type {import('concurrently').Command[]}
  */
@@ -80,8 +73,12 @@ const batchRpcFetch = (items) =>
 const rpcFetch = (method, params) =>
   batchRpcFetch([{ method, params }]).then((res) => res[0])
 
+/**
+ *
+ * @param {string | number} exitCode
+ * @returns
+ */
 async function cleanup(exitCode) {
-  const compose = await getCompose()
   let force = false
   if (cleanupRunning) {
     if (exitCode === 'SIGINT') {
@@ -304,8 +301,6 @@ export const main = async (_config, _options, justKill) => {
 
   // log the config we're using
   if (verbosity >= 1) console.log({ config, options })
-
-  const compose = await getCompose()
 
   const inxsToFinishOnExit = []
   const cmdsToRun = (config.scripts || []).map(
