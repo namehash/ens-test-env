@@ -34,7 +34,7 @@
     "typecheck": "tsc --noEmit -p jsconfig.json",
     "check": "biome check",
     "test": "node --test test/*.test.js",
-    "test:cov": "node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info test/*.test.js"
+    "test:cov": "node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info --experimental-test-module-mocks --test-coverage-include='src/*.js' test/*.test.js"
   },
   "bin": "./src/index.js",
   "packageManager": "pnpm@9.4.0+sha512.f549b8a52c9d2b8536762f99c0722205efc5af913e77835dbccc3b0b0b2ca9e7dc8022b78062c17291c48e88749c70ce88eb5a74f1fa8c4bf5e18bb46c8bd83a",
