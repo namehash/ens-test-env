@@ -26,6 +26,8 @@ services:
       DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
       DATABASE_SCHEMA: ens-test-env
       ENS_DEPLOYMENT_CHAIN: ens-test-env
+      HEAL_REVERSE_ADDRESSES: false
+      INDEX_RESOLVER_RECORDS: false
       ACTIVE_PLUGINS: subgraph
       NEXT_PUBLIC_DEPLOYMENT_ADDRESSES: ${NEXT_PUBLIC_DEPLOYMENT_ADDRESSES:-}
       DEPLOYMENT_ADDRESSES: ${DEPLOYMENT_ADDRESSES:-}
