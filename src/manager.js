@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process'
 import { Transform } from 'node:stream'
 import concurrently from 'concurrently'
 import compose from 'docker-compose'
+import dotenv from 'dotenv'
 import waitOn from 'wait-on'
 
 // ignore outputs from docker-compose if they contain any of these buffers, helpful for ignoring
@@ -118,13 +119,13 @@ async function cleanup(exitCode) {
           log: false,
         }),
       )
-      .catch(() => { })
+      .catch(() => {})
   }
 
   commands?.forEach((command) => {
     try {
       process.kill(command.pid, 'SIGKILL')
-    } catch { }
+    } catch {}
   })
 
   process.exit(exitCode ? 1 : 0)
@@ -139,7 +140,7 @@ const makePrepender = (prefix) =>
       // @ts-expect-error
       this._rest = this._rest?.length
         ? // @ts-expect-error
-        Buffer.concat([this._rest, chunk])
+          Buffer.concat([this._rest, chunk])
         : chunk
 
       let index
@@ -344,6 +345,21 @@ export const main = async (_config, _options, justKill) => {
   await awaitCommand('deploy', config.deployCommand)
   console.log('↳ done.')
 
+  // source .env.local
+  dotenv.config({ path: `${process.cwd()}/.env.local`, debug: true })
+  // load into docker compose opts again
+  opts.env = { ...process.env }
+
+  if (
+    !process.env.DEPLOYMENT_ADDRESSES &&
+    !process.env.NEXT_PUBLIC_DEPLOYMENT_ADDRESSES
+  ) {
+    console.error(
+      'process.env.[NEXT_PUBLIC_]DEPLOYMENT_ADDRESSES is not available, ENSNode is unable to index.',
+    )
+    return cleanup(1)
+  }
+
   // remove block timestamp interval after deploy (necessary for some tests to pass)
   await rpcFetch('anvil_removeBlockTimestampInterval', [])
 
@@ -409,9 +425,9 @@ export const main = async (_config, _options, justKill) => {
      * @type {import('concurrently').ConcurrentlyResult['result']}
      */
     let result
-      ; ({ commands, result } = concurrently(cmdsToRun, {
-        prefix: 'name',
-      }))
+    ;({ commands, result } = concurrently(cmdsToRun, {
+      prefix: 'name',
+    }))
 
     commands.forEach((cmd) => {
       if (inxsToFinishOnExit.includes(cmd.index)) {
