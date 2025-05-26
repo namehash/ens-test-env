@@ -5,6 +5,7 @@ import concurrently from 'concurrently'
 import compose from 'docker-compose'
 import dotenv from 'dotenv'
 import waitOn from 'wait-on'
+import { rpcFetch } from './utils.js'
 
 // ignore outputs from docker-compose if they contain any of these buffers, helpful for ignoring
 // verbose logs (esp. from anvil during deploy script)
@@ -49,29 +50,6 @@ let options
  * @type {import('./config.js').ENSTestEnvConfig}
  */
 let config
-
-/**
- * @param {object[]} items
- * @returns
- */
-const batchRpcFetch = (items) =>
-  fetch('http://localhost:8545', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(
-      items.map((item, i) => ({ jsonrpc: '2.0', id: i + 1, ...item })),
-    ),
-  }).then((res) => res.json())
-
-/**
- * @param {string} method
- * @param {*} params
- * @returns
- */
-const rpcFetch = (method, params) =>
-  batchRpcFetch([{ method, params }]).then((res) => res[0])
 
 /**
  *
