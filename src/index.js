@@ -13,7 +13,6 @@ import { main as manager } from './manager.js'
 let config
 const program = new Command()
 
-const __dirname = new URL('.', import.meta.url).pathname
 const cwd = process.cwd()
 
 program
@@ -53,7 +52,7 @@ program
     }
     // add default paths to config, and let them be replaced by specified vars
     const paths = {
-      composeFile: path.resolve(__dirname, './docker-compose.yml'),
+      composeFile: path.resolve(import.meta.dirname, './docker-compose.yml'),
     }
     const configPaths = config.paths || {}
     for (const [key, value] of Object.entries(configPaths)) {

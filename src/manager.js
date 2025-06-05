@@ -2,7 +2,12 @@ import concurrently from 'concurrently'
 import compose from 'docker-compose'
 import dotenv from 'dotenv'
 import waitOn from 'wait-on'
-import { awaitCommand, rpcFetch } from './utils.js'
+import {
+  awaitCommand,
+  logContainers,
+  rpcFetch,
+  waitForENSNode,
+} from './utils.js'
 
 // ignore outputs from docker-compose if they contain any of these buffers, helpful for ignoring
 // verbose logs (esp. from anvil during deploy script)
@@ -104,84 +109,6 @@ async function cleanup(exitCode) {
 }
 
 /**
- * logs containers by name, starting cleanup if they exit
- * @param {string[]} names
- */
-const logContainers = async (names) => {
-  compose
-    .logs(names, {
-      ...opts,
-      log: false,
-      follow: true,
-      callback: (chunk, source) => {
-        // check for exit buffer(s)
-        if (exitedBuffers.some((b) => chunk.includes(b))) return cleanup(1)
-
-        // forward stderr
-        if (source === 'stderr') return process.stderr.write(chunk)
-
-        // ignore log if verbosity 0
-        if (verbosity === 0) return
-
-        // ignore any output that matches 'ignoreOutput' buffers
-        const ignoreOutput = outputsToIgnore.some((ignoreBuffer) =>
-          chunk.includes(ignoreBuffer),
-        )
-        if (ignoreOutput) return
-
-        // forward stdout
-        return process.stdout.write(chunk)
-      },
-    })
-    .catch((e) => {
-      console.error(e)
-      cleanup(1)
-    })
-}
-
-/**
- * @param {number} blockheight
- */
-const waitForENSNode = async (blockheight) => {
-  // wait for server to be available
-  await waitOn({ resources: ['http://localhost:42069'] })
-
-  let currentBlockheight = 0
-  // getter for current indexed blockheight
-  const getCurrentBlock = async () =>
-    // TODO: once _meta is available on subgraph-compat schema (/subgraph), use that
-    fetch('http://localhost:42069/ponder', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: '{ _meta { status } }', variables: {} }),
-    })
-      .then((res) => res.json())
-      .then((res) => {
-        if (res.errors) throw new Error(JSON.stringify(res.errors))
-        const blockNumber = res.data._meta.status['1337'].block?.number
-        if (!blockNumber) return 0
-        return blockNumber
-      })
-      .catch((error) => {
-        console.error(error)
-        return 0
-      })
-
-  // wait for indexer to reach blockNumber
-  while (currentBlockheight < blockheight) {
-    currentBlockheight = await getCurrentBlock()
-    if (verbosity >= 1) {
-      console.log(
-        `ENSNode at blockheight: ${currentBlockheight}, need ${blockheight}`,
-      )
-    }
-
-    // sleep
-    await new Promise((resolve) => setTimeout(resolve, 500))
-  }
-}
-
-/**
  * @param {import('./config.js').ENSTestEnvConfig} _config
  * @param {*} _options
  * @param {boolean} [justKill]
@@ -222,7 +149,14 @@ export const main = async (_config, _options, justKill) => {
   // start anvil & wait for rpc
   console.log('Starting anvil...')
   await compose.upOne('anvil', opts)
-  logContainers(['anvil'])
+  logContainers(
+    ['anvil'],
+    cleanup,
+    opts,
+    exitedBuffers,
+    outputsToIgnore,
+    verbosity,
+  )
   await waitOn({ resources: ['tcp:localhost:8545'] })
   console.log('↳ done.')
 
@@ -310,14 +244,21 @@ export const main = async (_config, _options, justKill) => {
     console.log('Starting ENSNode...')
     // start ENSNode containers (dependencies also starts ensrainbow and postgres)
     await compose.upOne('ensindexer', opts)
-    logContainers(['ensindexer', 'ensrainbow', 'postgres'])
+    logContainers(
+      ['ensindexer', 'ensrainbow', 'postgres'],
+      cleanup,
+      opts,
+      exitedBuffers,
+      outputsToIgnore,
+      verbosity,
+    )
     console.log('↳ done.')
 
     // wait for it to index to present
     const { result } = await rpcFetch('eth_blockNumber', [])
     const blockheight = Number.parseInt(result.slice(2), 16)
     console.log(`Waiting for ENSNode to index to block ${blockheight}...`)
-    await waitForENSNode(blockheight)
+    await waitForENSNode(blockheight, verbosity)
     console.log('↳ done.')
   }
 

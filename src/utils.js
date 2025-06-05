@@ -1,5 +1,7 @@
 import { spawn } from 'node:child_process'
 import { Transform } from 'node:stream'
+import compose from 'docker-compose'
+import waitOn from 'wait-on'
 
 /**
  * @param {{ method: string; params: unknown[]}[]} items
@@ -92,4 +94,95 @@ export const awaitCommand = async (name, command, verbosity) => {
   }
   deploy.stderr.pipe(errPrepender).pipe(process.stderr)
   return new Promise((resolve) => deploy.on('exit', () => resolve()))
+}
+
+/**
+ * logs containers by name, starting cleanup if they exit
+ * @param {string[]} names
+ * @param {(exitCode: number | string) => void} cleanup
+ * @param {import('docker-compose').IDockerComposeOptions} opts
+ * @param {Buffer[]} exitedBuffers
+ * @param {Buffer[]} outputsToIgnore
+ * @param {number} verbosity
+ */
+export const logContainers = async (
+  names,
+  cleanup,
+  opts,
+  exitedBuffers,
+  outputsToIgnore,
+  verbosity,
+) => {
+  compose
+    .logs(names, {
+      ...opts,
+      log: false,
+      follow: true,
+      callback: (chunk, source) => {
+        // check for exit buffer(s)
+        if (exitedBuffers.some((b) => chunk.includes(b))) return cleanup(1)
+
+        // forward stderr
+        if (source === 'stderr') return process.stderr.write(chunk)
+
+        // ignore log if verbosity 0
+        if (verbosity === 0) return
+
+        // ignore any output that matches 'ignoreOutput' buffers
+        const ignoreOutput = outputsToIgnore.some((ignoreBuffer) =>
+          chunk.includes(ignoreBuffer),
+        )
+        if (ignoreOutput) return
+
+        // forward stdout
+        return process.stdout.write(chunk)
+      },
+    })
+    .catch((e) => {
+      console.error(e)
+      cleanup(1)
+    })
+}
+
+/**
+ * @param {number} blockheight
+ * @param {number} verbosity
+ */
+export const waitForENSNode = async (blockheight, verbosity) => {
+  // wait for server to be available
+  await waitOn({ resources: ['http://localhost:42069'] })
+
+  let currentBlockheight = 0
+  // getter for current indexed blockheight
+  const getCurrentBlock = async () =>
+    // TODO: once _meta is available on subgraph-compat schema (/subgraph), use that
+    fetch('http://localhost:42069/ponder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: '{ _meta { status } }', variables: {} }),
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        if (res.errors) throw new Error(JSON.stringify(res.errors))
+        const blockNumber = res.data._meta.status['1337'].block?.number
+        if (!blockNumber) return 0
+        return blockNumber
+      })
+      .catch((error) => {
+        console.error(error)
+        return 0
+      })
+
+  // wait for indexer to reach blockNumber
+  while (currentBlockheight < blockheight) {
+    currentBlockheight = await getCurrentBlock()
+    if (verbosity >= 1) {
+      console.log(
+        `ENSNode at blockheight: ${currentBlockheight}, need ${blockheight}`,
+      )
+    }
+
+    // sleep
+    await new Promise((resolve) => setTimeout(resolve, 500))
+  }
 }
