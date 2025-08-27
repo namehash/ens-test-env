@@ -1,10 +1,15 @@
 services:
-  anvil:
-    container_name: anvil
-    image: ghcr.io/foundry-rs/foundry:stable
-    entrypoint: anvil --chain-id 1337 --gas-limit 50000000 --timestamp 1640995200 $ANVIL_EXTRA_ARGS
+  devnet:
+    image: ghcr.io/ensdomains/namechain:11a5994
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "8545:8545"
+      - "8545:8545" # L1 chain
+      - "8546:8546" # L2 chain
+    expose:
+      - 8545
+      - 8546
     environment:
       ANVIL_IP_ADDR: "0.0.0.0"
 
@@ -16,11 +21,11 @@ services:
       - "42069:42069"
     depends_on:
       - postgres
-      - anvil
+      - devnet
       - ensrainbow
     environment:
       PORT: 42069
-      RPC_URL_1337: http://anvil:8545
+      RPC_URL_1337: http://localhost:8545
       ENSNODE_PUBLIC_URL: http://localhost:42069
       ENSRAINBOW_URL: http://ensrainbow:3223
       DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
@@ -53,12 +58,12 @@ services:
     container_name: metadata
     image: ghcr.io/ensdomains/ens-metadata-service:latest
     depends_on:
-      - anvil
+      - devnet
       - ensindexer
     ports:
       - "8080:8080"
     environment:
       - ADDRESS_ETH_REGISTRAR=$ADDRESS_ETH_REGISTRAR
       - ADDRESS_NAME_WRAPPER=$ADDRESS_NAME_WRAPPER
-      - RPC_PROVIDER=http://anvil:8545
+      - RPC_PROVIDER=http://localhost:8545
       - SUBGRAPH_URL=http://ensindexer:42069/subgraph

@@ -1,6 +1,7 @@
+import {} from 'node:fs/promises'
+import {} from 'node:path'
 import concurrently from 'concurrently'
 import compose from 'docker-compose'
-import dotenv from 'dotenv'
 import waitOn from 'wait-on'
 import {
   awaitCommand,
@@ -108,6 +109,91 @@ async function cleanup(exitCode) {
   process.exit(exitCode ? 1 : 0)
 }
 
+async function waitForDir(
+  container,
+  dirPath,
+  opts,
+  timeout = 10000,
+  interval = 500,
+) {
+  const start = Date.now()
+
+  while (Date.now() - start < timeout) {
+    try {
+      const result = await compose.exec(
+        container,
+        ['test', '-d', dirPath],
+        opts,
+      )
+      // exitCode 0 means the directory exists
+      if (result.exitCode === 0) return true
+    } catch {
+      // ignore errors while waiting
+    }
+    await new Promise((r) => setTimeout(r, interval))
+  }
+
+  throw new Error(
+    `Directory ${dirPath} did not appear in container ${container} within ${timeout}ms`,
+  )
+}
+
+import path from 'node:path'
+
+/**
+ *
+ * @param {string} container
+ * @param {*} dirPath
+ * @param {*} opts
+ * @returns {Promise<Record<string, `0x${string}`>>}
+ */
+async function loadDeploymentAddresses(container, dirPath, opts) {
+  try {
+    // 1️⃣ List all JSON files in the directory
+    const lsResult = await compose.exec(container, ['ls', dirPath], {
+      ...opts,
+      log: false,
+    })
+    const files = lsResult.out
+      .split('\n')
+      .map((f) => f.trim())
+      .filter((f) => f.endsWith('.json'))
+
+    /**
+     * @type {Record<string, `0x${string}`>}
+     */
+    const addressMap = {}
+
+    // 2️⃣ Read each JSON file
+    for (const file of files) {
+      const fullPath = path.posix.join(dirPath, file)
+
+      const catResult = await compose.exec(container, ['cat', fullPath], {
+        ...opts,
+        log: false,
+      })
+
+      const json = JSON.parse(catResult.out)
+      const name = path.basename(file, '.json') // strip extension
+
+      if (json.address) {
+        addressMap[name] = json.address
+      }
+    }
+
+    opts.env = opts.env || {}
+    opts.env.DEPLOYMENT_ADDRESSES = JSON.stringify(addressMap)
+    opts.env.NEXT_PUBLIC_DEPLOYMENT_ADDRESSES = JSON.stringify(addressMap)
+    process.env.DEPLOYMENT_ADDRESSES = JSON.stringify(addressMap)
+    process.env.NEXT_PUBLIC_DEPLOYMENT_ADDRESSES = JSON.stringify(addressMap)
+
+    return addressMap
+  } catch (err) {
+    console.error('Failed to load deployment addresses:', err)
+    throw err
+  }
+}
+
 /**
  * @param {import('./config.js').ENSTestEnvConfig} _config
  * @param {*} _options
@@ -147,18 +233,33 @@ export const main = async (_config, _options, justKill) => {
   )
 
   // start anvil & wait for rpc
-  console.log('Starting anvil...')
-  await compose.upOne('anvil', opts)
+  console.log('Starting devnet...')
+  await compose.upOne('devnet', opts)
   logContainers(
-    ['anvil'],
+    ['devnet'],
     cleanup,
-    opts,
+    {
+      ...opts,
+      env: {
+        ...opts.env,
+        DEPLOYMENT_ADDRESSES: process.env.DEPLOYMENT_ADDRESSES,
+        NEXT_PUBLIC_DEPLOYMENT_ADDRESSES:
+          process.env.NEXT_PUBLIC_DEPLOYMENT_ADDRESSES,
+      },
+    },
     exitedBuffers,
     outputsToIgnore,
     verbosity,
   )
   await waitOn({ resources: ['tcp:localhost:8545'] })
+
+  console.log('Waiting for L1 contracts to deploy')
+  await waitForDir('devnet', 'deployments/l1-local', opts)
+  console.log('Waiting for L2 contracts to deploy')
+  await waitForDir('devnet', 'deployments/l2-local', opts)
   console.log('↳ done.')
+
+  await loadDeploymentAddresses('devnet', 'deployments/l1-local', opts)
 
   // bail if cleaning up
   if (cleanupRunning) return
@@ -179,23 +280,10 @@ export const main = async (_config, _options, justKill) => {
   await rpcFetch('anvil_setBlockTimestampInterval', [1])
 
   // wait for deploy
-  console.log('Running deploy script...')
-  await awaitCommand('deploy', config.deployCommand, verbosity)
-  console.log('↳ done.')
-
-  // source .env.local
-  dotenv.config({ path: `${process.cwd()}/.env.local`, debug: true })
-  // load into docker compose opts again
-  opts.env = { ...process.env }
-
-  if (
-    !process.env.DEPLOYMENT_ADDRESSES &&
-    !process.env.NEXT_PUBLIC_DEPLOYMENT_ADDRESSES
-  ) {
-    console.error(
-      'process.env.[NEXT_PUBLIC_]DEPLOYMENT_ADDRESSES is not available, ENSNode is unable to index.',
-    )
-    return cleanup(1)
+  if (config.deployCommand) {
+    console.log('Running deploy script...')
+    await awaitCommand('deploy', config.deployCommand, verbosity)
+    console.log('↳ done.')
   }
 
   // remove block timestamp interval after deploy (necessary for some tests to pass)
