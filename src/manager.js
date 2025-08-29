@@ -141,8 +141,8 @@ import path from 'node:path'
 /**
  *
  * @param {string} container
- * @param {*} dirPath
- * @param {*} opts
+ * @param {string} dirPath
+ * @param {compose.IDockerComposeOptions} opts
  * @returns {Promise<Record<string, `0x${string}`>>}
  */
 async function loadDeploymentAddresses(container, dirPath, opts) {
@@ -184,6 +184,8 @@ async function loadDeploymentAddresses(container, dirPath, opts) {
     opts.env.NEXT_PUBLIC_DEPLOYMENT_ADDRESSES = JSON.stringify(addressMap)
     process.env.DEPLOYMENT_ADDRESSES = JSON.stringify(addressMap)
     process.env.NEXT_PUBLIC_DEPLOYMENT_ADDRESSES = JSON.stringify(addressMap)
+
+    opts.env.LegacyENSRegistry = '0x0000000000000000000000000000000000000000'
 
     return addressMap
   } catch (err) {
