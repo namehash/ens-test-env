@@ -1,5 +1,3 @@
-import {} from 'node:fs/promises'
-import {} from 'node:path'
 import concurrently from 'concurrently'
 import compose from 'docker-compose'
 import waitOn from 'wait-on'
@@ -97,13 +95,13 @@ async function cleanup(exitCode) {
           log: false,
         }),
       )
-      .catch(() => {})
+      .catch(() => { })
   }
 
   commands?.forEach((command) => {
     try {
       process.kill(command.pid, 'SIGKILL')
-    } catch {}
+    } catch { }
   })
 
   process.exit(exitCode ? 1 : 0)
@@ -358,9 +356,9 @@ export const main = async (_config, _options, justKill) => {
      * @type {import('concurrently').ConcurrentlyResult['result']}
      */
     let result
-    ;({ commands, result } = concurrently(cmdsToRun, {
-      prefix: 'name',
-    }))
+      ; ({ commands, result } = concurrently(cmdsToRun, {
+        prefix: 'name',
+      }))
 
     commands.forEach((cmd) => {
       if (inxsToFinishOnExit.includes(cmd.index)) {
