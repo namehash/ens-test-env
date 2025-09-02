@@ -185,7 +185,9 @@ async function loadDeploymentAddresses(container, dirPath, opts) {
     process.env.DEPLOYMENT_ADDRESSES = JSON.stringify(addressMap)
     process.env.NEXT_PUBLIC_DEPLOYMENT_ADDRESSES = JSON.stringify(addressMap)
 
+    // TODO: replace with actual legacy registry deployment
     opts.env.LegacyENSRegistry = '0x0000000000000000000000000000000000000000'
+    process.env.LegacyENSRegistry = '0x0000000000000000000000000000000000000000'
 
     return addressMap
   } catch (err) {
