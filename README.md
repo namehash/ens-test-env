@@ -8,7 +8,7 @@ Devnet from namechain deploys ENSv1 on L1 and ENSv1 on L1 and L2. Once devnet is
 
 ## Installation
 
-bash, docker and docker-compose are required.
+bash 4+, docker 20.10+ and docker-compose 2.0+ are required.
 
 ```sh
 bun i -g @ensdomains/ens-test-env
