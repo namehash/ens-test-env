@@ -14,10 +14,16 @@ services:
       - 8547
     environment:
       ANVIL_IP_ADDR: "0.0.0.0"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8545"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   ensindexer:
     container_name: ensindexer
-    image: ghcr.io/namehash/ensnode/ensindexer:0.26.0
+    image: ghcr.io/namehash/ensnode/ensindexer:latest
     pull_policy: always
     ports:
       - "42069:42069"
@@ -27,17 +33,21 @@ services:
       - ensrainbow
     environment:
       PORT: 42069
-      RPC_URL_1337: http://localhost:8545
+      RPC_URL_1337: http://devnet:8545
+      RPC_URL_1: http://devnet:8545
       ENSNODE_PUBLIC_URL: http://localhost:42069
       ENSRAINBOW_URL: http://ensrainbow:3223
+      ENSINDEXER_URL: http://ensindexer:42069
       DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
       DATABASE_SCHEMA: ens-test-env
       ENS_DEPLOYMENT_CHAIN: ens-test-env
+      NAMESPACE: ens-test-env
       HEAL_REVERSE_ADDRESSES: false
       INDEX_RESOLVER_RECORDS: false
-      ACTIVE_PLUGINS: subgraph
-      NEXT_PUBLIC_DEPLOYMENT_ADDRESSES: ${NEXT_PUBLIC_DEPLOYMENT_ADDRESSES:-}
-      DEPLOYMENT_ADDRESSES: ${DEPLOYMENT_ADDRESSES:-}
+      LABEL_SET_ID: subgraph
+      LABEL_SET_VERSION: 0
+      PLUGINS: subgraph
+      DEPLOYMENT_ADDRESSES: '{"LegacyENSRegistry":"0x610178dA211FEF7D417bC0e6FeD39F05609AD788","ENSRegistry":"0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e","BaseRegistrarImplementation":"0xa82fF9aFd8f496c3d6ac40E2a0F282E47488CFc9","NameWrapper":"0x2E2Ed0Cfd3AD2f1d34481277b3204d807Ca2F8c2","UniversalResolver":"0xD84379CEae14AA33C123Af12424A37803F885889","ETHRegistrarController":"0x36b58F5C1969B7b6591D752ea6F5486D069010AB","LegacyETHRegistrarController":"0x5081a39b8A5f0E35a8D959395a630b68B74Dd30f","WrappedETHRegistrarController":"0x253553366Da8546fC250F225fe3d25d0C782303b"}'
 
   ensrainbow:
     container_name: ensrainbow
