@@ -17,6 +17,6 @@ bun i -g @ensdomains/ens-test-env
 ## Usage
 
 ```sh
-ens-test-env
+ens-test-env start
 ```
-To stop, simply press `ctrl+C`. Sometimes devnet might get stuck, in such case do `docker rm -f <name of devnet container>`.
+To stop, simply press `ctrl+C` or execute `ens-test-env stop`. Sometimes devnet might get stuck, in such case do `docker rm -f <name of devnet container>`.
