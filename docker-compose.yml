@@ -1,5 +1,6 @@
 services:
   devnet:
+    container_name: devnet
     image: ghcr.io/ensdomains/namechain:d800b74
     build:
       context: .
