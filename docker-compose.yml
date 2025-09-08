@@ -28,9 +28,12 @@ services:
     ports:
       - "42069:42069"
     depends_on:
-      - postgres
-      - devnet
-      - ensrainbow
+      postgres:
+        condition: service_started
+      ensrainbow:
+        condition: service_healthy
+      devnet:
+        condition: service_started
     environment:
       PORT: 42069
       RPC_URL_15658733: http://devnet:8545
@@ -49,7 +52,7 @@ services:
 
   ensrainbow:
     container_name: ensrainbow
-    image: ghcr.io/namehash/ensnode/ensrainbow:latest
+    image: ghcr.io/namehash/ensnode/ensrainbow:0.36.0-rc.1
     pull_policy: always
     environment:
       DB_SCHEMA_VERSION: 3
@@ -58,6 +61,13 @@ services:
       LOG_LEVEL: error
     tmpfs:
       - /app/apps/ensrainbow/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3223/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20m
+      start_interval: 30s
 
   postgres:
     container_name: postgres
