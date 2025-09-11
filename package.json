@@ -1,12 +1,12 @@
 {
   "name": "@ensdomains/ens-test-env",
   "type": "module",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "files": [
     "index.sh",
     "docker-compose.yml"
   ],
-  "bin": "./src/index.js",
+  "bin": "./index.sh",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ensdomains/ens-test-env.git"
