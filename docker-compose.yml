@@ -1,10 +1,7 @@
 services:
   devnet:
     container_name: devnet
-    image: ghcr.io/ensdomains/namechain:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/ensdomains/namechain:4626a96
     ports:
       - "8545:8545" # L1 chain
       - "8546:8546" # L2 chain
