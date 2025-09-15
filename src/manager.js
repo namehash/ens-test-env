@@ -119,19 +119,19 @@ export const main = async (_config, _options, justKill) => {
   options = _options
   verbosity = Number.parseInt(options.verbosity)
 
-  opts.cwd = config.paths.composeFile.split('/docker-compose.yml')[0]
-  opts.env = { ...process.env }
-
   // if verbosity is high enough
   if (verbosity >= 2) {
     // unset outputsToIgnore (log everything)
     outputsToIgnore = []
     // enforce anvil tracing logs
-    opts.env.ANVIL_EXTRA_ARGS = '--tracing'
+    process.env.ANVIL_EXTRA_ARGS = '--tracing'
   } else {
     // silence 'variable is not set' warning
-    opts.env.ANVIL_EXTRA_ARGS = ''
+    process.env.ANVIL_EXTRA_ARGS = ''
   }
+
+  opts.cwd = config.paths.composeFile.split('/docker-compose.yml')[0]
+  opts.env = { ...process.env }
 
   if (justKill) return cleanup('SIGINT')
 
