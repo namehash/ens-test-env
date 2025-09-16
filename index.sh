@@ -3,7 +3,7 @@ set -e
 
 # Containers to manage
 SERVICES_DEVNET="devnet postgres"
-SERVICES_ENSNODE="ensindexer ensrainbow metadata"
+SERVICES_ENSNODE="ensindexer ensrainbow ensadmin metadata"
 
 cleanup() {
     echo "Stopping all services..."
@@ -15,10 +15,15 @@ trap cleanup SIGINT SIGTERM
 
 start() {
     echo "Starting devnet and postgres..."
-    docker compose up $SERVICES_DEVNET &
 
-    DEVNET_PID=$!
+    docker compose up $SERVICES_DEVNET -d
 
+    # start logging
+    docker compose logs -f &
+    LOGS_PID=$!
+
+    # TODO: replace with devnet healthcheck, after which we can just do `docker compose up` and docker
+    # will orchestrate containers based on the dependency graph
     echo "Waiting for devnet to be ready..."
     while true; do
         if docker compose logs devnet | grep -q "Ready!"; then
@@ -29,9 +34,13 @@ start() {
     done
 
     echo "Starting ensindexer, ensrainbow, and metadata..."
-    docker compose up $SERVICES_ENSNODE
+    docker compose up $SERVICES_ENSNODE -d
 
-    wait $DEVNET_PID
+    # TODO: implement ensindexer healthcheck & forward control to consumer
+
+    wait $LOGS_PID
+
+    stop
 }
 
 stop() {
