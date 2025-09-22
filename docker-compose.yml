@@ -64,10 +64,10 @@ services:
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3223/health"]
       interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20m
-      start_interval: 30s
+      timeout: 5s
+      retries: 2
+      start_period: 2m
+      start_interval: 1s
 
   ensadmin:
     container_name: ensadmin
