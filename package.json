@@ -1,43 +1,12 @@
 {
   "name": "@ensdomains/ens-test-env",
   "type": "module",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "files": [
-    "src",
-    "ens-test-env.config.js"
+    "index.sh",
+    "docker-compose.yml"
   ],
-  "types": "src/index.d.ts",
-  "engines": {
-    "node": ">=20"
-  },
-  "dependencies": {
-    "cli-progress": "^3.10.0",
-    "commander": "^14.0.0",
-    "concurrently": "^9.1.2",
-    "docker-compose": "^1.2.0",
-    "dotenv": "^16.5.0",
-    "dunai": "0.0.0-dev.2",
-    "js-yaml": "^4.1.0",
-    "picocolors": "^1.1.1",
-    "tar-fs": "^3.0.9",
-    "wait-on": "^8.0.2"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
-    "@types/js-yaml": "^4.0.9",
-    "@types/node": "^22.15.21",
-    "ts-node": "^10.7.0",
-    "typescript": "^5.3.2"
-  },
-  "preferUnplugged": true,
-  "scripts": {
-    "typecheck": "tsc --noEmit -p jsconfig.json",
-    "check": "biome check",
-    "test": "node --test test/*.test.js",
-    "test:cov": "node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info --experimental-test-module-mocks --test-coverage-include='src/*.js' test/*.test.js"
-  },
-  "bin": "./src/index.js",
-  "packageManager": "pnpm@9.4.0+sha512.f549b8a52c9d2b8536762f99c0722205efc5af913e77835dbccc3b0b0b2ca9e7dc8022b78062c17291c48e88749c70ce88eb5a74f1fa8c4bf5e18bb46c8bd83a",
+  "bin": "./index.sh",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ensdomains/ens-test-env.git"
