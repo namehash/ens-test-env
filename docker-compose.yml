@@ -60,6 +60,9 @@ services:
         condition: service_started
       ensindexer:
         condition: service_healthy
+    env_file:
+      - path: .env.local
+        required: true
     environment:
       ENSINDEXER_URL: http://ensindexer:42069
       DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
