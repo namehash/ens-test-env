@@ -1,6 +1,5 @@
 services:
   devnet:
-    container_name: devnet
     image: ghcr.io/ensdomains/namechain:main-f037aec
     command: ./script/runDevnet.ts --testNames
     pull_policy: always
@@ -8,10 +7,6 @@ services:
       - "8545:8545" # L1 chain
       - "8546:8546" # L2 chain
       - "8547:8547" # Urg
-    expose:
-      - 8545
-      - 8546
-      - 8547
     environment:
       ANVIL_IP_ADDR: "0.0.0.0"
     healthcheck:
@@ -23,11 +18,8 @@ services:
       start_interval: 1s
 
   ensindexer:
-    container_name: ensindexer
     image: ghcr.io/namehash/ensnode/ensindexer:1.0.0-ensv2.3
     pull_policy: always
-    ports:
-      - "42069:42069"
     depends_on:
       postgres:
         condition: service_started
@@ -55,7 +47,6 @@ services:
       start_interval: 1s
 
   ensrainbow:
-    container_name: ensrainbow
     image: ghcr.io/namehash/ensnode/ensrainbow:1.0.0-ensv2.3
     pull_policy: always
     environment:
@@ -74,7 +65,6 @@ services:
       start_interval: 1s
 
   ensapi:
-    container_name: ensapi
     image: ghcr.io/namehash/ensnode/ensapi:1.0.0-ensv2.3
     pull_policy: always
     ports:
@@ -89,7 +79,6 @@ services:
       DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
 
   ensadmin:
-    container_name: ensadmin
     image: ghcr.io/namehash/ensnode/ensadmin:1.0.0-ensv2.3
     pull_policy: always
     ports:
@@ -101,7 +90,6 @@ services:
       - ensapi
 
   postgres:
-    container_name: postgres
     restart: always
     image: postgres:17
     environment:
@@ -111,17 +99,16 @@ services:
       - /var/lib/postgresql/data
 
   metadata:
-    container_name: metadata
     image: ghcr.io/ensdomains/ens-metadata-service:latest
     depends_on:
-      # - devnet
+      - devnet
       - ensindexer
     ports:
       - "8080:8080"
     environment:
-      - ADDRESS_ETH_REGISTRAR=0x36b58F5C1969B7b6591D752ea6F5486D069010AB
-      - ADDRESS_NAME_WRAPPER=0x2E2Ed0Cfd3AD2f1d34481277b3204d807Ca2F8c2
-      - RPC_PROVIDER=http://localhost:8545
+      - ADDRESS_ETH_REGISTRAR=0xb7278a61aa25c888815afc32ad3cc52ff24fe575
+      - ADDRESS_NAME_WRAPPER=0xfd471836031dc5108809d173a067e8486b9047a3
+      - RPC_PROVIDER=http://devnet:8545
       - SUBGRAPH_URL=http://ensindexer:42069/subgraph
 
 volumes:
