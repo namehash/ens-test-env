@@ -1,7 +1,7 @@
 services:
   ensindexer:
     container_name: ensindexer
-    image: ghcr.io/namehash/ensnode/ensindexer:1.0.0-ensv2.2
+    image: ghcr.io/namehash/ensnode/ensindexer:1.0.0-ensv2.3
     pull_policy: always
     ports:
       - "42069:42069"
@@ -32,7 +32,7 @@ services:
 
   ensrainbow:
     container_name: ensrainbow
-    image: ghcr.io/namehash/ensnode/ensrainbow:1.0.0-ensv2.2
+    image: ghcr.io/namehash/ensnode/ensrainbow:1.0.0-ensv2.3
     pull_policy: always
     environment:
       DB_SCHEMA_VERSION: 3
@@ -51,7 +51,7 @@ services:
 
   ensapi:
     container_name: ensapi
-    image: ghcr.io/namehash/ensnode/ensapi:1.0.0-ensv2.2
+    image: ghcr.io/namehash/ensnode/ensapi:1.0.0-ensv2.3
     pull_policy: always
     ports:
       - "4334:4334"
@@ -69,7 +69,7 @@ services:
 
   ensadmin:
     container_name: ensadmin
-    image: ghcr.io/namehash/ensnode/ensadmin:1.0.0-ensv2.2
+    image: ghcr.io/namehash/ensnode/ensadmin:1.0.0-ensv2.3
     pull_policy: always
     ports:
       - "4173:4173"
