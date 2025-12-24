@@ -1,6 +1,6 @@
 services:
   devnet:
-    image: ghcr.io/ensdomains/namechain:main-f037aec
+    image: ghcr.io/ensdomains/namechain:main-9e31679
     command: ./script/runDevnet.ts --testNames
     pull_policy: always
     ports:
@@ -18,7 +18,7 @@ services:
       start_interval: 1s
 
   ensindexer:
-    image: ghcr.io/namehash/ensnode/ensindexer:1.3.1-ensv2.1
+    image: ghcr.io/namehash/ensnode/ensindexer:1.3.1-ensv2.3
     pull_policy: always
     depends_on:
       postgres:
@@ -47,7 +47,7 @@ services:
       start_interval: 1s
 
   ensrainbow:
-    image: ghcr.io/namehash/ensnode/ensrainbow:1.3.1-ensv2.1
+    image: ghcr.io/namehash/ensnode/ensrainbow:1.3.1-ensv2.3
     pull_policy: always
     environment:
       DB_SCHEMA_VERSION: 3
@@ -65,7 +65,7 @@ services:
       start_interval: 1s
 
   ensapi:
-    image: ghcr.io/namehash/ensnode/ensapi:1.3.1-ensv2.1
+    image: ghcr.io/namehash/ensnode/ensapi:1.3.1-ensv2.3
     pull_policy: always
     ports:
       - "4334:4334"
@@ -77,9 +77,11 @@ services:
     environment:
       ENSINDEXER_URL: http://ensindexer:42069
       DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
+      RPC_URL_15658733: http://devnet:8545
+      RPC_URL_15658734: http://devnet:8546
 
   ensadmin:
-    image: ghcr.io/namehash/ensnode/ensadmin:1.3.1-ensv2.1
+    image: ghcr.io/namehash/ensnode/ensadmin:1.3.1-ensv2.3
     pull_policy: always
     ports:
       - "4173:4173"
