@@ -33,7 +33,7 @@ services:
       DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
       DATABASE_SCHEMA: ens-test-env
       NAMESPACE: ens-test-env
-      PLUGINS: ensv2,protocol-acceleration
+      PLUGINS: subgraph,protocol-acceleration
       LABEL_SET_ID: ens-test-env
       LABEL_SET_VERSION: 0
       RPC_URL_15658733: http://devnet:8545
