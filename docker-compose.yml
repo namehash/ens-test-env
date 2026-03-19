@@ -1,12 +1,10 @@
 services:
   devnet:
-    image: ghcr.io/ensdomains/namechain:main-9e31679
+    image: ghcr.io/ensdomains/contracts-v2:main-4ac5517
     command: ./script/runDevnet.ts --testNames
     pull_policy: always
     ports:
-      - "8545:8545" # L1 chain
-      - "8546:8546" # L2 chain
-      - "8547:8547" # Urg
+      - "8545:8545"
     environment:
       ANVIL_IP_ADDR: "0.0.0.0"
     healthcheck:
@@ -18,7 +16,7 @@ services:
       start_interval: 1s
 
   ensindexer:
-    image: ghcr.io/namehash/ensnode/ensindexer:1.5.1
+    image: ghcr.io/namehash/ensnode/ensindexer:preview-feat-update-devnet-addresses
     pull_policy: always
     depends_on:
       postgres:
@@ -33,7 +31,7 @@ services:
       DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
       DATABASE_SCHEMA: ens-test-env
       NAMESPACE: ens-test-env
-      PLUGINS: ensv2,protocol-acceleration
+      PLUGINS: subgraph
       LABEL_SET_ID: ens-test-env
       LABEL_SET_VERSION: 0
       RPC_URL_15658733: http://devnet:8545
@@ -47,7 +45,7 @@ services:
       start_interval: 1s
 
   ensrainbow:
-    image: ghcr.io/namehash/ensnode/ensrainbow:1.5.1
+    image: ghcr.io/namehash/ensnode/ensrainbow:preview-feat-update-devnet-addresses
     pull_policy: always
     environment:
       DB_SCHEMA_VERSION: 3
@@ -65,7 +63,7 @@ services:
       start_interval: 1s
 
   ensapi:
-    image: ghcr.io/namehash/ensnode/ensapi:1.5.1
+    image: ghcr.io/namehash/ensnode/ensapi:preview-feat-update-devnet-addresses
     pull_policy: always
     ports:
       - "4334:4334"
@@ -81,7 +79,7 @@ services:
       RPC_URL_15658734: http://devnet:8546
 
   ensadmin:
-    image: ghcr.io/namehash/ensnode/ensadmin:1.5.1
+    image: ghcr.io/namehash/ensnode/ensadmin:preview-feat-update-devnet-addresses
     pull_policy: always
     ports:
       - "4173:4173"
@@ -108,8 +106,8 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - ADDRESS_ETH_REGISTRAR=0xb7278a61aa25c888815afc32ad3cc52ff24fe575
-      - ADDRESS_NAME_WRAPPER=0xfd471836031dc5108809d173a067e8486b9047a3
+      - ADDRESS_ETH_REGISTRAR=0x4C4a2f8c81640e47606d3fd77B353E87Ba015584
+      - ADDRESS_NAME_WRAPPER=0x5081a39b8A5f0E35a8D959395a630b68B74Dd30f
       - RPC_PROVIDER=http://devnet:8545
       - SUBGRAPH_URL=http://ensindexer:42069/subgraph
 
