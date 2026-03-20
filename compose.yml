@@ -32,7 +32,7 @@ services:
       DATABASE_SCHEMA: ens-test-env
       NAMESPACE: ens-test-env
       PLUGINS: subgraph
-      LABEL_SET_ID: subgraph
+      LABEL_SET_ID: ens-test-env
       LABEL_SET_VERSION: 0
       RPC_URL_15658733: http://devnet:8545
       RPC_URL_15658734: http://devnet:8546
@@ -49,7 +49,7 @@ services:
     pull_policy: always
     environment:
       DB_SCHEMA_VERSION: 3
-      LABEL_SET_ID: subgraph
+      LABEL_SET_ID: ens-test-env
       LABEL_SET_VERSION: 0
       LOG_LEVEL: error
     volumes:
