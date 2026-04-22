@@ -16,7 +16,7 @@ services:
       start_interval: 1s
 
   ensindexer:
-    image: ghcr.io/namehash/ensnode/ensindexer:1.10.0
+    image: ghcr.io/namehash/ensnode/ensindexer:1.10.1
     pull_policy: always
     depends_on:
       postgres:
@@ -45,7 +45,7 @@ services:
       start_interval: 1s
 
   ensrainbow:
-    image: ghcr.io/namehash/ensnode/ensrainbow:1.10.0
+    image: ghcr.io/namehash/ensnode/ensrainbow:1.10.1
     pull_policy: always
     environment:
       DB_SCHEMA_VERSION: 3
@@ -63,7 +63,7 @@ services:
       start_interval: 1s
 
   ensapi:
-    image: ghcr.io/namehash/ensnode/ensapi:1.10.0
+    image: ghcr.io/namehash/ensnode/ensapi:1.10.1
     pull_policy: always
     ports:
       - "4334:4334"
@@ -85,7 +85,7 @@ services:
         condition: service_healthy
 
   ensadmin:
-    image: ghcr.io/namehash/ensnode/ensadmin:1.10.0
+    image: ghcr.io/namehash/ensnode/ensadmin:1.10.1
     pull_policy: always
     ports:
       - "4173:4173"
