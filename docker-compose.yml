@@ -8,7 +8,7 @@ services:
     environment:
       ANVIL_IP_ADDR: "0.0.0.0"
     healthcheck:
-      test: ["CMD", "curl", "--fail", "-s", "http://localhost:8000/health"]
+      test: [ "CMD", "curl", "--fail", "-s", "http://localhost:8000/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -16,20 +16,20 @@ services:
       start_interval: 1s
 
   ensindexer:
-    image: ghcr.io/namehash/ensnode/ensindexer:preview-feat-update-devnet-addresses
+    image: ghcr.io/namehash/ensnode/ensindexer:1.10.0
     pull_policy: always
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
       ensrainbow:
         condition: service_healthy
       devnet:
-        condition: service_started
+        condition: service_healthy
     environment:
       ENSINDEXER_URL: http://ensindexer:42069
       ENSRAINBOW_URL: http://ensrainbow:3223
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
-      DATABASE_SCHEMA: ens-test-env
+      ENSDB_URL: postgresql://postgres:password@postgres:5432/postgres
+      ENSINDEXER_SCHEMA_NAME: ensindexer_temp_ens-test-env
       NAMESPACE: ens-test-env
       PLUGINS: ensv2,protocol-acceleration
       LABEL_SET_ID: ens-test-env
@@ -37,7 +37,7 @@ services:
       RPC_URL_15658733: http://devnet:8545
       RPC_URL_15658734: http://devnet:8546
     healthcheck:
-      test: ["CMD", "curl", "--fail", "-s", "http://localhost:42069/health"]
+      test: [ "CMD", "curl", "--fail", "-s", "http://localhost:42069/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -45,7 +45,7 @@ services:
       start_interval: 1s
 
   ensrainbow:
-    image: ghcr.io/namehash/ensnode/ensrainbow:preview-feat-update-devnet-addresses
+    image: ghcr.io/namehash/ensnode/ensrainbow:1.10.0
     pull_policy: always
     environment:
       DB_SCHEMA_VERSION: 3
@@ -55,7 +55,7 @@ services:
     volumes:
       - ensrainbow_data:/app/apps/ensrainbow/data
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3223/health"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3223/health" ]
       interval: 30s
       timeout: 5s
       retries: 2
@@ -63,23 +63,29 @@ services:
       start_interval: 1s
 
   ensapi:
-    image: ghcr.io/namehash/ensnode/ensapi:preview-feat-update-devnet-addresses
+    image: ghcr.io/namehash/ensnode/ensapi:1.10.0
     pull_policy: always
     ports:
       - "4334:4334"
+    environment:
+      ENSDB_URL: postgresql://postgres:password@postgres:5432/postgres
+      ENSINDEXER_SCHEMA_NAME: ensindexer_temp_ens-test-env
+      RPC_URL_15658733: http://devnet:8545
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "-s", "http://localhost:4334/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 1m
+      start_interval: 1s
     depends_on:
       postgres:
-        condition: service_started
-      ensindexer:
         condition: service_healthy
-    environment:
-      ENSINDEXER_URL: http://ensindexer:42069
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
-      RPC_URL_15658733: http://devnet:8545
-      RPC_URL_15658734: http://devnet:8546
+      devnet:
+        condition: service_healthy
 
   ensadmin:
-    image: ghcr.io/namehash/ensnode/ensadmin:preview-feat-update-devnet-addresses
+    image: ghcr.io/namehash/ensnode/ensadmin:1.10.0
     pull_policy: always
     ports:
       - "4173:4173"
@@ -87,29 +93,39 @@ services:
       ENSADMIN_PUBLIC_URL: http://localhost:4173
       NEXT_PUBLIC_DEFAULT_ENSNODE_URLS: http://localhost:4334
     depends_on:
-      - ensapi
+      ensapi:
+        condition: service_healthy
 
   postgres:
     restart: always
     image: postgres:17
     environment:
+      POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     tmpfs:
       - /var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   metadata:
     image: ghcr.io/ensdomains/ens-metadata-service:latest
     depends_on:
-      - devnet
-      - ensindexer
+      devnet:
+        condition: service_healthy
+      ensindexer:
+        condition: service_healthy
     ports:
       - "8080:8080"
     environment:
       - ADDRESS_ETH_REGISTRAR=0xb7278a61aa25c888815afc32ad3cc52ff24fe575
       - ADDRESS_NAME_WRAPPER=0xfd471836031dc5108809d173a067e8486b9047a3
       - RPC_PROVIDER=http://devnet:8545
-      - SUBGRAPH_URL=http://ensindexer:42069/subgraph
+      - SUBGRAPH_URL=http://ensapi:4334/subgraph
 
 volumes:
   ensrainbow_data:
