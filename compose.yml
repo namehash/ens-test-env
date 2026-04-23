@@ -31,7 +31,7 @@ services:
       ENSDB_URL: postgresql://postgres:password@postgres:5432/postgres
       ENSINDEXER_SCHEMA_NAME: ensindexer_temp_ens-test-env
       NAMESPACE: ens-test-env
-      PLUGINS: ensv2,protocol-acceleration
+      PLUGINS: subgraph,ensv2,protocol-acceleration
       LABEL_SET_ID: ens-test-env
       LABEL_SET_VERSION: 0
       RPC_URL_15658733: http://devnet:8545
