@@ -122,8 +122,8 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - ADDRESS_ETH_REGISTRAR=0xb7278a61aa25c888815afc32ad3cc52ff24fe575
-      - ADDRESS_NAME_WRAPPER=0xfd471836031dc5108809d173a067e8486b9047a3
+      - ADDRESS_ETH_REGISTRAR=0x8a791620dd6260079bf849dc5567adc3f2fdc318
+      - ADDRESS_NAME_WRAPPER=0x5081a39b8a5f0e35a8d959395a630b68b74dd30f
       - RPC_PROVIDER=http://devnet:8545
       - SUBGRAPH_URL=http://ensapi:4334/subgraph
 
