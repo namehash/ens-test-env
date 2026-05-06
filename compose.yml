@@ -1,6 +1,6 @@
 services:
   devnet:
-    image: ghcr.io/ensdomains/contracts-v2:main-e8696c6
+    image: ghcr.io/ensdomains/contracts-v2:main-580c60a
     command: ./script/runDevnet.ts --testNames
     pull_policy: always
     ports:
@@ -16,19 +16,18 @@ services:
       start_interval: 1s
 
   ensindexer:
-    image: ghcr.io/namehash/ensnode/ensindexer:1.10.1
+    image: ghcr.io/namehash/ensnode/ensindexer:1.11.0
     pull_policy: always
     depends_on:
-      postgres:
+      ensdb:
         condition: service_healthy
       ensrainbow:
         condition: service_healthy
       devnet:
         condition: service_healthy
     environment:
-      ENSINDEXER_URL: http://ensindexer:42069
       ENSRAINBOW_URL: http://ensrainbow:3223
-      ENSDB_URL: postgresql://postgres:password@postgres:5432/postgres
+      ENSDB_URL: postgresql://postgres:password@ensdb:5432/postgres
       ENSINDEXER_SCHEMA_NAME: ensindexer_temp_ens-test-env
       NAMESPACE: ens-test-env
       PLUGINS: subgraph,ensv2,protocol-acceleration
@@ -45,7 +44,7 @@ services:
       start_interval: 1s
 
   ensrainbow:
-    image: ghcr.io/namehash/ensnode/ensrainbow:1.10.1
+    image: ghcr.io/namehash/ensnode/ensrainbow:1.11.0
     pull_policy: always
     environment:
       DB_SCHEMA_VERSION: 3
@@ -57,18 +56,18 @@ services:
     healthcheck:
       test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3223/health" ]
       interval: 30s
-      timeout: 5s
-      retries: 2
+      timeout: 3s
+      retries: 3
       start_period: 2m
       start_interval: 1s
 
   ensapi:
-    image: ghcr.io/namehash/ensnode/ensapi:1.10.1
+    image: ghcr.io/namehash/ensnode/ensapi:1.11.0
     pull_policy: always
     ports:
       - "4334:4334"
     environment:
-      ENSDB_URL: postgresql://postgres:password@postgres:5432/postgres
+      ENSDB_URL: postgresql://postgres:password@ensdb:5432/postgres
       ENSINDEXER_SCHEMA_NAME: ensindexer_temp_ens-test-env
       RPC_URL_15658733: http://devnet:8545
     healthcheck:
@@ -79,24 +78,24 @@ services:
       start_period: 1m
       start_interval: 1s
     depends_on:
-      postgres:
+      ensdb:
         condition: service_healthy
       devnet:
         condition: service_healthy
 
   ensadmin:
-    image: ghcr.io/namehash/ensnode/ensadmin:1.10.1
+    image: ghcr.io/namehash/ensnode/ensadmin:1.11.0
     pull_policy: always
     ports:
       - "4173:4173"
     environment:
       ENSADMIN_PUBLIC_URL: http://localhost:4173
-      NEXT_PUBLIC_DEFAULT_ENSNODE_URLS: http://localhost:4334
+      NEXT_PUBLIC_SERVER_CONNECTION_LIBRARY: http://localhost:4334
     depends_on:
       ensapi:
         condition: service_healthy
 
-  postgres:
+  ensdb:
     restart: always
     image: postgres:17
     environment:
